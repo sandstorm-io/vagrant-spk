@@ -1,0 +1,181 @@
+#!/usr/bin/env python
+
+# vagrant-spk init
+#   8000
+# vagrant-spk dev
+# vagrant-spk pack
+
+import argparse
+import os
+import sys
+import subprocess
+
+PWD = os.getcwd()
+CODE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # We base ourselves off the trusty (Ubuntu 14.04) base box.
+  config.vm.box = "trusty64"
+
+  # The url from which to fetch that base box.
+  config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+
+  # We forward port 6080, the Sandstorm web port, so that developers can
+  # visit their sandstorm app from their browser as local.sandstorm.io:6080
+  # (aka 127.0.0.1:6080).
+  config.vm.network :forwarded_port, guest: 6080, host: 6080
+
+  # Use a shell script to "provision" the box. This install Sandstorm using
+  # the bundled installer.
+  config.vm.provision "shell",
+    inline: "echo localhost > /etc/hostname && hostname localhost && curl https://install.sandstorm.io/ > install.sh && sudo bash install.sh -d -e"
+
+  # Make the vagrant user part of the sandstorm group so that commands like
+  # `spk dev` work.
+  config.vm.provision "shell", inline: "usermod -a -G 'sandstorm' 'vagrant'"
+  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/setup-php.sh"
+
+  # Use NFS for the /vagrant shared directory, for performance and
+  # compatibility.
+  config.vm.synced_folder "..", "/vagrant"
+  config.vm.synced_folder "..", "/opt/app"
+  config.vm.synced_folder ENV["HOME"] + "/.sandstorm", "/host-dot-sandstorm"
+
+  # Calculate the number of CPUs and the amount of RAM the system has,
+  # in a platform-dependent way; further logic below.
+  cpus = nil
+  total_kB_ram = nil
+
+  host = RbConfig::CONFIG['host_os']
+  if host =~ /darwin/
+    cpus = `sysctl -n hw.ncpu`.to_i
+    total_kB_ram =  `sysctl -n hw.memsize`.to_i / 1024
+  elsif host =~ /linux/
+    cpus = `nproc`.to_i
+    total_kB_ram = `grep MemTotal /proc/meminfo | awk '{print $2}'`.to_i
+  end
+
+  # Use the same number of CPUs within Vagrant as the system, with 1
+  # as a default.
+  #
+  # Use at least 512MB of RAM, and if the system has more than 2GB of
+  # RAM, use 1/4 of the system RAM. This seems a reasonable compromise
+  # between having the Vagrant guest operating system not run out of
+  # RAM entirely (which it basically would if we went much lower than
+  # 512MB) and also allowing it to use up a healthily large amount of
+  # RAM so it can run faster on systems that can afford it.
+  config.vm.provider :virtualbox do |vb|
+    if cpus.nil?
+      vb.cpus = 1
+    else
+      vb.cpus = cpus
+    end
+
+    if total_kB_ram.nil? or total_kB_ram < 2048000
+      vb.memory = 512
+    else
+      vb.memory = (total_kB_ram / 1024 / 4)
+    end
+  end
+end
+"""
+
+SETUP_PHP_SCRIPT = r"""#!/bin/bash
+
+apt-get install -y nginx php5-fpm
+sudo unlink /etc/nginx/sites-enabled/default
+cat > /etc/nginx/sites-available/sandstorm-php <<EOF
+server {
+    listen 8000 default_server;
+    listen [::]:8000 default_server ipv6only=on;
+
+    server_name localhost;
+    root /opt/app;
+    location / {
+        index index.php;
+        try_files \$uri \$uri/ =404;
+    }
+    location ~ \\.php\$ {
+        fastcgi_split_path_info ^(.+\\.php)(/.+)\$;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+}
+EOF
+sudo ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
+sudo service nginx restart
+"""
+
+def check_dot_sandstorm():
+    expected_path = os.path.join(PWD, ".sandstorm")
+    if not os.path.isdir(expected_path):
+        raise Exception("expected to find a .sandstorm folder at {}".format(os.path.abspath(expected_path)))
+    expected_vagrantfile_path = os.path.join(expected_path, "Vagrantfile")
+    if not os.path.exists(expected_vagrantfile_path):
+        raise Exception("expected a Vagrantfile at {}".format(expected_vagrantfile_path))
+
+def call_vagrant_command(sandstorm_dir, *command_args):
+    command = ["vagrant"]
+    command.extend(command_args)
+    print "Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir)
+    return subprocess.check_call(command, cwd=sandstorm_dir)
+
+def init(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    print "Initializing .sandstorm directory in {}".format(sandstorm_dir)
+    # Create .sandstorm directory
+    if not os.path.isdir(sandstorm_dir):
+        os.makedirs(sandstorm_dir, mode=0755)
+
+    # Copy script to install and configure nginx and php5-fpm
+    with open(os.path.join(sandstorm_dir, "setup-php.sh"), "w") as f:
+        f.write(SETUP_PHP_SCRIPT)
+
+    # Copy default launcher script to sandstorm root for spk tracking
+    launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh"), "w"
+    with open(launcher_script_path) as f:
+        f.write(LAUNCHER_SCRIPT)
+    os.chmod(launcher_script_path, 0755)
+
+    # Copy in Vagrantfile
+    vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
+    with open(vagrantfile_path, "w") as f:
+        f.write(VAGRANTFILE_CONTENTS)
+
+    # Bring up VM
+    call_vagrant_command(sandstorm_dir, "up")
+
+    # Initialize the package with spk init
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
+
+def dev(args):
+    pass
+
+def pack(args):
+    pass
+
+def wipe(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    print call_vagrant_command(sandstorm_dir, "destroy", "--force")
+
+def main():
+    parser = argparse.ArgumentParser(prog=sys.argv[0])
+    parser.add_argument("command", choices=['init','dev','pack','wipe'])
+    parser.add_argument("--work-directory", action='store', default=PWD)
+    args = parser.parse_args(sys.argv[1:])
+    operation = {
+            'init': init,
+            'dev': dev,
+            'pack': pack,
+            'wipe': wipe,
+    }[args.command]
+    operation(args)
+
+if __name__ == "__main__":
+    main()
