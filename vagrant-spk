@@ -86,7 +86,7 @@ end
 """
 
 SETUP_PHP_SCRIPT = r"""#!/bin/bash
-
+export DEBIAN_FRONTEND=noninteractive
 apt-get install -y nginx php5-fpm
 sudo unlink /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-php <<EOF
@@ -109,7 +109,21 @@ server {
 }
 EOF
 sudo ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
-sudo service nginx restart
+sudo service nginx stop
+sudo service php5-fpm stop
+# TODO: update sandstorm installer script to ask about dev accounts, and
+# specify a value for this option in the default config?
+if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm.conf ; then
+    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
+    sudo service sandstorm restart
+fi
+"""
+
+LAUNCHER_SCRIPT = r"""#!/bin/bash
+
+# Spawn php and nginx.
+/usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
+/usr/sbin/nginx -g "daemon off;"
 """
 
 def check_dot_sandstorm():
@@ -118,7 +132,7 @@ def check_dot_sandstorm():
         raise Exception("expected to find a .sandstorm folder at {}".format(os.path.abspath(expected_path)))
     expected_vagrantfile_path = os.path.join(expected_path, "Vagrantfile")
     if not os.path.exists(expected_vagrantfile_path):
-        raise Exception("expected a Vagrantfile at {}".format(expected_vagrantfile_path))
+        raise Exception("expected a Vagrantfile at {} - try 'vagrant-spk init' to generate one".format(expected_vagrantfile_path))
 
 def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
@@ -126,20 +140,36 @@ def call_vagrant_command(sandstorm_dir, *command_args):
     print "Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir)
     return subprocess.check_call(command, cwd=sandstorm_dir)
 
-def init(args):
+def ensure_host_sandstorm_folder_exists():
+    # We wrap the keyring in an additional folder, because Vagrant shared
+    # folders can't share single files, only folders, and I don't want to give
+    # the VM read/write access to the user's entire homedir, just the sandstorm
+    # keyring.
+    USER_SANDSTORM_DIR = os.path.join(os.path.expanduser("~"), ".sandstorm")
+    if not os.path.exists(USER_SANDSTORM_DIR):
+        print "Creating {} to hold developer keys.".format(USER_SANDSTORM_DIR)
+        os.makedirs(USER_SANDSTORM_DIR)
+        # Sandstorm is unhappy if you give it a keyring path that doesn't exist,
+        # but is totally happy if that file is empty.
+        keyring_file = os.path.join(USER_SANDSTORM_DIR, ".sandstorm-keyring")
+
+def setup_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print "Initializing .sandstorm directory in {}".format(sandstorm_dir)
     # Create .sandstorm directory
     if not os.path.isdir(sandstorm_dir):
         os.makedirs(sandstorm_dir, mode=0755)
 
+    # Make sure ~/.sandstorm exists for storing signing keys
+    ensure_host_sandstorm_folder_exists()
+
     # Copy script to install and configure nginx and php5-fpm
     with open(os.path.join(sandstorm_dir, "setup-php.sh"), "w") as f:
         f.write(SETUP_PHP_SCRIPT)
 
     # Copy default launcher script to sandstorm root for spk tracking
-    launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh"), "w"
-    with open(launcher_script_path) as f:
+    launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
+    with open(launcher_script_path, "w") as f:
         f.write(LAUNCHER_SCRIPT)
     os.chmod(launcher_script_path, 0755)
 
@@ -148,33 +178,53 @@ def init(args):
     with open(vagrantfile_path, "w") as f:
         f.write(VAGRANTFILE_CONTENTS)
 
+def bring_up_vm(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Bring up VM
     call_vagrant_command(sandstorm_dir, "up")
 
+def init(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/.sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
 
 def dev(args):
-    pass
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef")
 
 def pack(args):
-    pass
+    output_spk = args.command_specific_args[0]
+    print output_spk
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk pack --keyring=/host-dot-sandstorm/.sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk")
+    os.rename("sandstorm-package.spk", output_spk)
+    print "package produced at {}".format(output_spk)
 
 def wipe(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print call_vagrant_command(sandstorm_dir, "destroy", "--force")
 
+def ssh(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh")
+
 def main():
-    parser = argparse.ArgumentParser(prog=sys.argv[0])
-    parser.add_argument("command", choices=['init','dev','pack','wipe'])
-    parser.add_argument("--work-directory", action='store', default=PWD)
-    args = parser.parse_args(sys.argv[1:])
-    operation = {
+    operations = {
+            'setupvm': setup_vm,
+            'up': bring_up_vm,
             'init': init,
             'dev': dev,
             'pack': pack,
             'wipe': wipe,
-    }[args.command]
+            'ssh': ssh,
+    }
+    parser = argparse.ArgumentParser(prog=sys.argv[0])
+    parser.add_argument("command", choices=sorted(operations.keys()))
+    parser.add_argument("command_specific_args", nargs="*")
+    parser.add_argument("--work-directory", action='store', default=PWD)
+    args = parser.parse_args(sys.argv[1:])
+    operation = operations[args.command]
     operation(args)
 
 if __name__ == "__main__":
