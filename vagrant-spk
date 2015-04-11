@@ -7,8 +7,9 @@
 
 import argparse
 import os
-import sys
+import shutil
 import subprocess
+import sys
 
 PWD = os.getcwd()
 CODE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -30,18 +31,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # (aka 127.0.0.1:6080).
   config.vm.network :forwarded_port, guest: 6080, host: 6080
 
-  # Use a shell script to "provision" the box. This install Sandstorm using
+  # Use a shell script to "provision" the box. This installs Sandstorm using
   # the bundled installer.
-  config.vm.provision "shell",
-    inline: "echo localhost > /etc/hostname && hostname localhost && curl https://install.sandstorm.io/ > install.sh && sudo bash install.sh -d -e"
+  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/global-setup.sh"
+  # Then, do stack-specific and app-specific setup.
+  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/setup.sh"
 
-  # Make the vagrant user part of the sandstorm group so that commands like
-  # `spk dev` work.
-  config.vm.provision "shell", inline: "usermod -a -G 'sandstorm' 'vagrant'"
-  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/setup-php.sh"
-
-  # Use NFS for the /vagrant shared directory, for performance and
-  # compatibility.
+  # Share a few host folders into the VM, since it'll need them
   config.vm.synced_folder "..", "/vagrant"
   config.vm.synced_folder "..", "/opt/app"
   config.vm.synced_folder ENV["HOME"] + "/.sandstorm", "/host-dot-sandstorm"
@@ -85,9 +81,28 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 end
 """
 
-SETUP_PHP_SCRIPT = r"""#!/bin/bash
+GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
+set -eu
+echo localhost > /etc/hostname
+hostname localhost
+curl https://install.sandstorm.io/ > install.sh
+bash install.sh -d -e
+modprobe ip_tables
+# Make the vagrant user part of the sandstorm group so that commands like
+# `spk dev` work.
+usermod -a -G 'sandstorm' 'vagrant'
+# TODO: update sandstorm installer script to ask about dev accounts, and
+# specify a value for this option in the default config?
+if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm.conf ; then
+    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
+    sudo service sandstorm restart
+fi
+"""
+
+LEMP_SETUP_SCRIPT = r"""#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y nginx php5-fpm
+apt-get update
+apt-get install -y nginx php5-fpm php5-mysql mysql-server
 sudo unlink /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-php <<EOF
 server {
@@ -111,20 +126,55 @@ EOF
 sudo ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
 sudo service nginx stop
 sudo service php5-fpm stop
-# TODO: update sandstorm installer script to ask about dev accounts, and
-# specify a value for this option in the default config?
-if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm.conf ; then
-    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
-    sudo service sandstorm restart
-fi
+sudo service mysql stop
+# patch /etc/php5/fpm/php-fpm.conf to not change uid/gid to www-data
+sed --in-place='' \
+        --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
+        --expression='s/^listen.group = www-data/#listen.group = www-data/' \
+        --expression='s/^user = www-data/#user = www-data/' \
+        --expression='s/^group = www-data/#group = www-data/' \
+        /etc/php5/fpm/pool.d/www.conf
+# patch mysql conf to not change uid
+sed --in-place='' \
+        --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
+        /etc/mysql/my.cnf
+# patch nginx conf to not bother trying to setuid, since we're not root
+sed --in-place='' \
+        --expression 's/^user www-data/#user www-data/' \
+        --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        /etc/nginx/nginx.conf
 """
 
-LAUNCHER_SCRIPT = r"""#!/bin/bash
+LEMP_LAUNCHER_SCRIPT = r"""#!/bin/bash
 
-# Spawn php and nginx.
+# Create a bunch of folders under the clean /var that php, nginx, and mysql expect to exist
+mkdir -p /var/lib/mysql
+mkdir -p /var/lib/nginx
+mkdir -p /var/log
+mkdir -p /var/log/mysql
+mkdir -p /var/log/nginx
+mkdir -p /var/run
+mkdir -p /var/run/mysqld
+
+# Ensure mysql tables created
+HOME=/etc/mysql /usr/bin/mysql_install_db --force
+
+# Spawn php, mysqld, and nginx.
 /usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
+HOME=/etc/mysql /usr/sbin/mysqld &
+# TODO: wait for mysql and php5-fpm to be satisfactorily up before spawning
+# nginx, to avoid 502s while the backend comes up?
+# (systemd would do this nicely for us with socket activation...)
 /usr/sbin/nginx -g "daemon off;"
 """
+
+# TODO: add more stack-specific plugins
+STACK_PLUGINS = {
+    "lemp": {
+        "setup": LEMP_SETUP_SCRIPT,
+        "launcher": LEMP_LAUNCHER_SCRIPT,
+    },
+}
 
 def check_dot_sandstorm():
     expected_path = os.path.join(PWD, ".sandstorm")
@@ -149,11 +199,21 @@ def ensure_host_sandstorm_folder_exists():
     if not os.path.exists(USER_SANDSTORM_DIR):
         print "Creating {} to hold developer keys.".format(USER_SANDSTORM_DIR)
         os.makedirs(USER_SANDSTORM_DIR)
-        # Sandstorm is unhappy if you give it a keyring path that doesn't exist,
-        # but is totally happy if that file is empty.
-        keyring_file = os.path.join(USER_SANDSTORM_DIR, ".sandstorm-keyring")
+    # Sandstorm is unhappy if you give it a keyring path that doesn't exist,
+    # but is totally happy if that file is empty.  So ensure a file exists.
+    keyring_file = os.path.join(USER_SANDSTORM_DIR, "sandstorm-keyring")
+    if not os.path.exists(keyring_file):
+        with open(keyring_file, "wb") as f:
+            pass
 
 def setup_vm(args):
+    expected_stack_plugin = args.command_specific_args[0]
+    if expected_stack_plugin not in STACK_PLUGINS:
+        raise Exception("No stack plugin for {}".format(expected_stack_plugin))
+    stack_plugin = STACK_PLUGINS[expected_stack_plugin]
+    if "setup" not in stack_plugin or "launcher" not in stack_plugin:
+        raise Exception("Stack plugins require both 'setup' and 'launcher' scripts.")
+
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print "Initializing .sandstorm directory in {}".format(sandstorm_dir)
     # Create .sandstorm directory
@@ -163,14 +223,18 @@ def setup_vm(args):
     # Make sure ~/.sandstorm exists for storing signing keys
     ensure_host_sandstorm_folder_exists()
 
-    # Copy script to install and configure nginx and php5-fpm
-    with open(os.path.join(sandstorm_dir, "setup-php.sh"), "w") as f:
-        f.write(SETUP_PHP_SCRIPT)
+    # Copy global setup script to e.g. install and configure sandstorm
+    with open(os.path.join(sandstorm_dir, "global-setup.sh"), "w") as f:
+        f.write(GLOBAL_SETUP_SCRIPT)
+
+    # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
+    with open(os.path.join(sandstorm_dir, "setup.sh"), "w") as f:
+        f.write(stack_plugin["setup"])
 
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "w") as f:
-        f.write(LAUNCHER_SCRIPT)
+        f.write(stack_plugin["launcher"])
     os.chmod(launcher_script_path, 0755)
 
     # Copy in Vagrantfile
@@ -186,7 +250,7 @@ def bring_up_vm(args):
 def init(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/.sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -196,7 +260,10 @@ def pack(args):
     output_spk = args.command_specific_args[0]
     print output_spk
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk pack --keyring=/host-dot-sandstorm/.sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk")
+    # spk doesn't like to build packages on the vboxsf filesystem due to some
+    # oddity when you unlink an open file, so we build the package in the guest
+    # homedir, then move it out to the host.
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk")
     os.rename("sandstorm-package.spk", output_spk)
     print "package produced at {}".format(output_spk)
@@ -204,6 +271,7 @@ def pack(args):
 def wipe(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print call_vagrant_command(sandstorm_dir, "destroy", "--force")
+    shutil.rmtree(sandstorm_dir)
 
 def ssh(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
