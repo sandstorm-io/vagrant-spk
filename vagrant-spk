@@ -160,12 +160,20 @@ mkdir -p /var/run/mysqld
 # Ensure mysql tables created
 HOME=/etc/mysql /usr/bin/mysql_install_db --force
 
-# Spawn php, mysqld, and nginx.
-/usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
+# Spawn mysqld, php
 HOME=/etc/mysql /usr/sbin/mysqld &
-# TODO: wait for mysql and php5-fpm to be satisfactorily up before spawning
-# nginx, to avoid 502s while the backend comes up?
-# (systemd would do this nicely for us with socket activation...)
+/usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
+# Wait until mysql and php have bound their sockets, indicating readiness
+while [ ! -e /var/run/mysqld/mysqld.sock ] ; do
+    echo "waiting for mysql to be available at /var/run/mysqld/mysqld.sock"
+    sleep .2
+done
+while [ ! -e /var/run/php5-fpm.sock ] ; do
+    echo "waiting for php5-fpm to be available at /var/run/php5-fpm.sock"
+    sleep .2
+done
+
+# Start nginx.
 /usr/sbin/nginx -g "daemon off;"
 """
 
