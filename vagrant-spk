@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+# vagrant-spk setupvm lemp
+# vagrant-spk up
 # vagrant-spk init
-#   8000
 # vagrant-spk dev
-# vagrant-spk pack
+# vagrant-spk pack output.spk
 
 import argparse
 import os
