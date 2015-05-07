@@ -130,7 +130,7 @@ LEMP_SETUP_SCRIPT = r"""#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y nginx php5-fpm php5-mysql mysql-server
-sudo unlink /etc/nginx/sites-enabled/default
+unlink /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-php <<EOF
 server {
     listen 8000 default_server;
@@ -150,10 +150,10 @@ server {
     }
 }
 EOF
-sudo ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
-sudo service nginx stop
-sudo service php5-fpm stop
-sudo service mysql stop
+ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
+service nginx stop
+service php5-fpm stop
+service mysql stop
 # patch /etc/php5/fpm/php-fpm.conf to not change uid/gid to www-data
 sed --in-place='' \
         --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
@@ -170,6 +170,18 @@ sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
         /etc/nginx/nginx.conf
+# Add a conf snippet providing what sandstorm-http-bridge says the protocol is as var fe_https
+cat > /etc/nginx/conf.d/50sandstorm.conf << EOF
+    # Trust the sandstorm-http-bridge's X-Forwarded-Proto.
+    map \$http_x_forwarded_proto \$fe_https {
+        default "";
+        https on;
+    }
+EOF
+# Adjust fastcgi_params to use the patched fe_https
+sed --in-place='' \
+        --expression 's/^fastcgi_param\tHTTPS.*$/fastcgi_param\tHTTPS\t\t\$fe_https if_not_empty;/' \
+        /etc/nginx/fastcgi_params
 """
 
 LEMP_LAUNCHER_SCRIPT = r"""#!/bin/bash
