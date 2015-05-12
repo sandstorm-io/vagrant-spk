@@ -126,6 +126,19 @@ sudo service puppet stop
 sudo service chef-client stop
 """
 
+EMPTY_BUILD_SCRIPT = r"""#!/bin/bash
+# This is a script that is run every time you call "vagrant-spk dev".
+# It is intended to do platform-and-repository-specific build steps.  You
+# might customize it to do any of the following, or more:
+# - for Python, prepare a virtualenv and pip install -r requirements.txt
+# - for PHP, call composer to retrieve additional packages
+# - for JS/CSS/SASS/LESS, compile, minify, or otherwise do asset pipeline work.
+# This particular script does nothing at present, but you should adapt it
+# sensibly for your package.
+
+exit 0
+"""
+
 LEMP_SETUP_SCRIPT = r"""#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -215,11 +228,107 @@ done
 /usr/sbin/nginx -g "daemon off;"
 """
 
+NGINX_UWSGI_SETUP_SCRIPT = r"""
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv
+# Set up nginx conf
+unlink /etc/nginx/sites-enabled/default
+cat > /etc/nginx/sites-available/sandstorm-python <<EOF
+server {
+    listen 8000 default_server;
+    listen [::]:8000 default_server ipv6only=on;
+
+    server_name localhost;
+    root /opt/app;
+    location /static/ {
+        alias /opt/app/static/;
+    }
+    location / {
+        uwsgi_pass unix:///var/run/uwsgi.sock;
+        include uwsgi_params;
+    }
+}
+EOF
+ln -s /etc/nginx/sites-available/sandstorm-python /etc/nginx/sites-enabled/sandstorm-python
+# patch mysql conf to not change uid
+sed --in-place='' \
+        --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
+        /etc/mysql/my.cnf
+# patch nginx conf to not bother trying to setuid, since we're not root
+sed --in-place='' \
+        --expression 's/^user www-data/#user www-data/' \
+        --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        /etc/nginx/nginx.conf
+service nginx stop
+service mysql stop
+"""
+
+NGINX_UWSGI_BUILD_SCRIPT = r"""#!/bin/bash
+VENV=/opt/app/env
+if [ ! -d $VENV ] ; then
+    virtualenv $VENV
+else
+    echo "$VENV exists, moving on"
+fi
+
+if [ -f /opt/app/requirements.txt ] ; then
+    $VENV/bin/pip install -r /opt/app/requirements.txt
+fi
+"""
+
+NGINX_UWSGI_LAUNCHER_SCRIPT = r"""#!/bin/bash
+# something something folders
+mkdir -p /var/lib/mysql
+mkdir -p /var/lib/nginx
+mkdir -p /var/log
+mkdir -p /var/log/mysql
+mkdir -p /var/log/nginx
+mkdir -p /var/run
+mkdir -p /var/run/mysqld
+
+UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
+
+# Ensure mysql tables created
+HOME=/etc/mysql /usr/bin/mysql_install_db --force
+
+# Spawn mysqld
+HOME=/etc/mysql /usr/sbin/mysqld &
+
+MYSQL_SOCKET_FILE=/var/run/mysqld/mysqld.sock
+# Wait for mysql to bind its socket
+while [ ! -e $MYSQL_SOCKET_FILE ] ; do
+    echo "waiting for mysql to be available at $MYSQL_SOCKET_FILE"
+    sleep .2
+done
+
+# Spawn uwsgi
+HOME=/var uwsgi \
+        --socket $UWSGI_SOCKET_FILE \
+        --plugin python \
+        --virtualenv /opt/app/env \
+        --wsgi-file /opt/app/main.py &
+
+# Wait for uwsgi to bind its socket
+while [ ! -e $UWSGI_SOCKET_FILE ] ; do
+    echo "waiting for uwsgi to be available at $UWSGI_SOCKET_FILE"
+    sleep .2
+done
+
+# Start nginx.
+/usr/sbin/nginx -g "daemon off;"
+"""
+
 # TODO: add more stack-specific plugins
 STACK_PLUGINS = {
     "lemp": {
         "setup": LEMP_SETUP_SCRIPT,
         "launcher": LEMP_LAUNCHER_SCRIPT,
+    },
+    "uwsgi": {
+        "setup": NGINX_UWSGI_SETUP_SCRIPT,
+        "launcher": NGINX_UWSGI_LAUNCHER_SCRIPT,
+        "build": NGINX_UWSGI_BUILD_SCRIPT,
     },
 }
 
@@ -282,6 +391,16 @@ def setup_vm(args):
     with open(os.path.join(sandstorm_dir, "setup.sh"), "w") as f:
         f.write(stack_plugin["setup"])
 
+    # Copy build script, if present, to sandstorm root.  If none is provided by
+    # this stack, add an empty one so that users can customize it if needed.
+    build_script_path = os.path.join(sandstorm_dir, "build.sh")
+    with open(build_script_path, "w") as f:
+        if 'build' in stack_plugin:
+            f.write(stack_plugin["build"])
+        else:
+            f.write(EMPTY_BUILD_SCRIPT)
+    os.chmod(build_script_path, 0755)
+
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "w") as f:
@@ -305,7 +424,7 @@ def init(args):
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "/opt/app/.sandstorm/build.sh && spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef")
 
 def pack(args):
     output_spk = args.command_specific_args[0]
