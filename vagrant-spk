@@ -147,7 +147,7 @@ exit 0
 LEMP_SETUP_SCRIPT = r"""#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y nginx php5-fpm php5-mysql mysql-server
+apt-get install -y nginx php5-fpm php5-mysql php5-cli php5-curl git php5-dev mysql-server
 unlink /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-php <<EOF
 server {
@@ -200,6 +200,21 @@ EOF
 sed --in-place='' \
         --expression 's/^fastcgi_param\tHTTPS.*$/fastcgi_param\tHTTPS\t\t\$fe_https if_not_empty;/' \
         /etc/nginx/fastcgi_params
+"""
+
+LEMP_BUILD_SCRIPT = r"""#!/bin/bash
+# Checks if there's a composer.json, and if so, installs/runs composer.
+
+set -eu
+
+cd /opt/app
+
+if [ -f /opt/app/composer.json ] ; then
+    if [ ! -f composer.phar ] ; then
+        curl -sS https://getcomposer.org/installer | php
+    fi
+    php composer.phar
+fi
 """
 
 LEMP_LAUNCHER_SCRIPT = r"""#!/bin/bash
@@ -371,6 +386,7 @@ STACK_PLUGINS = {
     "lemp": {
         "setup": LEMP_SETUP_SCRIPT,
         "launcher": LEMP_LAUNCHER_SCRIPT,
+        "build": LEMP_BUILD_SCRIPT,
     },
     "uwsgi": {
         "setup": NGINX_UWSGI_SETUP_SCRIPT,
