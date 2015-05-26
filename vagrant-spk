@@ -70,7 +70,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     cpus = `nproc`.to_i
     total_kB_ram = `grep MemTotal /proc/meminfo | awk '{print $2}'`.to_i
   end
-
   # Use the same number of CPUs within Vagrant as the system, with 1
   # as a default.
   #
@@ -80,18 +79,22 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # RAM entirely (which it basically would if we went much lower than
   # 512MB) and also allowing it to use up a healthily large amount of
   # RAM so it can run faster on systems that can afford it.
+  if cpus.nil?
+    cpus = 1
+  end
+  if total_kB_ram.nil? or total_kB_ram < 2048000
+    assign_ram_mb = 512
+  else
+    assign_ram_mb = (total_kB_ram / 1024 / 4)
+  end
+  # Actually apply these CPU/memory values to the providers.
   config.vm.provider :virtualbox do |vb|
-    if cpus.nil?
-      vb.cpus = 1
-    else
-      vb.cpus = cpus
-    end
-
-    if total_kB_ram.nil? or total_kB_ram < 2048000
-      vb.memory = 512
-    else
-      vb.memory = (total_kB_ram / 1024 / 4)
-    end
+    vb.cpus = cpus
+    vb.memory = assign_ram_mb
+  end
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.cpus = cpus
+    libvirt.memory = assign_ram_mb
   end
 end
 """
