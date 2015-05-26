@@ -213,7 +213,7 @@ if [ -f /opt/app/composer.json ] ; then
     if [ ! -f composer.phar ] ; then
         curl -sS https://getcomposer.org/installer | php
     fi
-    php composer.phar
+    php composer.phar install
 fi
 """
 
