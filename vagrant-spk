@@ -212,11 +212,13 @@ set -eu
 
 cd /opt/app
 
-if [ -f /opt/app/composer.json ] ; then
+if [ -f /opt/app/frontend/composer.json ] ; then
     if [ ! -f composer.phar ] ; then
         curl -sS https://getcomposer.org/installer | php
     fi
-    php composer.phar install
+    cd /opt/app/frontend
+    php ../composer.phar install
+    php ../composer.phar self-update
 fi
 """
 
