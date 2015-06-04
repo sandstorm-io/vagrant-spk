@@ -515,6 +515,10 @@ def pack(args):
     os.rename("sandstorm-package.spk", output_spk)
     print "package produced at {}".format(output_spk)
 
+def halt(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    print call_vagrant_command(sandstorm_dir, "halt")
+
 def destroy(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print call_vagrant_command(sandstorm_dir, "destroy", "--force")
@@ -535,6 +539,7 @@ def main():
             'init': init,
             'dev': dev,
             'pack': pack,
+            'halt': halt,
             'destroy': destroy,
             'wipe': wipe,
             'ssh': ssh,
