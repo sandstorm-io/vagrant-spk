@@ -494,7 +494,11 @@ def init(args):
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "/opt/app/.sandstorm/build.sh && spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "/opt/app/.sandstorm/build.sh",
+        "cd /opt/app/.sandstorm",
+        "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
+    ]))
 
 def pack(args):
     output_spk = args.command_specific_args[0]
@@ -503,8 +507,11 @@ def pack(args):
     # spk doesn't like to build packages on the vboxsf filesystem due to some
     # oddity when you unlink an open file, so we build the package in the guest
     # homedir, then move it out to the host.
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "cd /opt/app.sandstorm/",
+        "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk",
+        "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
+    ]))
     os.rename("sandstorm-package.spk", output_spk)
     print "package produced at {}".format(output_spk)
 
