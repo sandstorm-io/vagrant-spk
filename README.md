@@ -26,17 +26,17 @@ See also https://github.com/sandstorm-io/sandstorm/wiki/Porting-an-app-with-vagr
     # upload it, install it, and create a new instance of your app.
 
 ## What the files are for
-`vagrant-spk`will create a `.sandstorm/` folder in your repo and set up some
+`vagrant-spk` will create a `.sandstorm/` folder in your repo and set up some
 files with some defaults for your app stack.  You will likely need to modify
 some of these to adapt their behavior to make the most sense for your app.
 
 ### global-setup.sh
 This installs Sandstorm using the official installer script, enables developer
-accounts, and stops unneeded services on the VM.  It caches the sandstorm
+accounts, and stops unneeded services on the VM.  It caches the Sandstorm
 bundle to speed up subsequent runs. You should not need to change this script.
 
 ### setup.sh
-This script runs when you setup the VM by `vagrant-spk up` the first time and
+This script runs when you set up the VM by `vagrant-spk up` the first time and
 does stack-specific setup, like installing tools or daemons needed to build and
 run your app.  `vagrant-spk` provides some defaults based on commonly-used platform
 stacks, but you'll likely want to modify this script as suitable for your package.
