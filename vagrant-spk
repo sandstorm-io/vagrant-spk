@@ -508,7 +508,7 @@ def pack(args):
     # oddity when you unlink an open file, so we build the package in the guest
     # homedir, then move it out to the host.
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
-        "cd /opt/app.sandstorm/",
+        "cd /opt/app/.sandstorm/",
         "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk",
         "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
     ]))
