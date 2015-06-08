@@ -485,6 +485,9 @@ def setup_vm(args):
 
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    # Make sure ~/.sandstorm exists, since global-setup.sh uses
+    # ~/.sandstorm/caches to cache the installers
+    ensure_host_sandstorm_folder_exists()
     # Bring up VM
     call_vagrant_command(sandstorm_dir, "up")
 
