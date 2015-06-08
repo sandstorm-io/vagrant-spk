@@ -95,6 +95,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provider :libvirt do |libvirt|
     libvirt.cpus = cpus
     libvirt.memory = assign_ram_mb
+    libvirt.random_hostname = true
   end
 end
 """
