@@ -35,11 +35,8 @@ VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  # We base ourselves off the trusty (Ubuntu 14.04) base box.
-  config.vm.box = "trusty64"
-
-  # The url from which to fetch that base box.
-  config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+  # We base ourselves off Debian Jessie
+  config.vm.box = "debian/jessie64"
 
   # We forward port 6080, the Sandstorm web port, so that developers can
   # visit their sandstorm app from their browser as local.sandstorm.io:6080
@@ -173,9 +170,10 @@ server {
         try_files \$uri \$uri/ =404;
     }
     location ~ \\.php\$ {
-        fastcgi_split_path_info ^(.+\\.php)(/.+)\$;
         fastcgi_pass unix:/var/run/php5-fpm.sock;
         fastcgi_index index.php;
+        fastcgi_split_path_info ^(.+\\.php)(/.+)\$;
+        fastcgi_param  SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         include fastcgi_params;
     }
 }
@@ -184,13 +182,17 @@ ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstor
 service nginx stop
 service php5-fpm stop
 service mysql stop
-# patch /etc/php5/fpm/php-fpm.conf to not change uid/gid to www-data
+# patch /etc/php5/fpm/pool.d/www.conf to not change uid/gid to www-data
 sed --in-place='' \
         --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
         --expression='s/^listen.group = www-data/#listen.group = www-data/' \
         --expression='s/^user = www-data/#user = www-data/' \
         --expression='s/^group = www-data/#group = www-data/' \
         /etc/php5/fpm/pool.d/www.conf
+# patch /etc/php5/fpm/php-fpm.conf to not have a pidfile
+sed --in-place='' \
+        --expression='s/^pid =/#pid =/' \
+        /etc/php5/fpm/php-fpm.conf
 # patch mysql conf to not change uid
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
