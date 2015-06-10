@@ -6,7 +6,7 @@ See also https://github.com/sandstorm-io/sandstorm/wiki/Porting-an-app-with-vagr
 
 ## Example usage:
 
-    git clone git://github.com/zarvox/vagrant-spk
+    git clone git://github.com/sandstorm-io/vagrant-spk
     git clone git://github.com/paulproteus/php-app-to-package-for-sandstorm
     export PATH=$(pwd)/vagrant-spk:$PATH
     cd php-app-to-package-for-sandstorm
