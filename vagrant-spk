@@ -297,6 +297,13 @@ def dev(args):
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ]))
 
+def devjoin(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "cd /opt/app/.sandstorm",
+        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid"
+    ]))
+
 def pack(args):
     output_spk = args.command_specific_args[0]
     print(output_spk)
@@ -338,6 +345,7 @@ def main():
             'up': bring_up_vm,
             'init': init,
             'dev': dev,
+            'devjoin': devjoin,
             'pack': pack,
             'halt': halt,
             'destroy': destroy,
