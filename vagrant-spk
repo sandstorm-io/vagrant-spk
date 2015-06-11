@@ -624,6 +624,13 @@ def dev(args):
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ]))
 
+def devjoin(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "cd /opt/app/.sandstorm",
+        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid"
+    ]))
+
 def pack(args):
     output_spk = args.command_specific_args[0]
     print(output_spk)
@@ -766,6 +773,7 @@ def main():
             "  ~/.sandstorm on this host."),
         Command('vm', vm_subcommand,
             "Pass through all subsequent arguments to `vagrant` run in `.sandstorm`."),
+        Command('devjoin', devjoin, "Mumble hack devjoin"),
         Command('vm up', None, "Start the Vagrant VM (and build the VM image if needed)"),
         Command('vm halt', None, "Shut down the Vagrant VM."),
         Command('vm destroy', None, "Delete the Vagrant VM (but leave --work-directory untouched)."),
