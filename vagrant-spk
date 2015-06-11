@@ -359,6 +359,87 @@ done
 /usr/sbin/nginx -g "daemon off;"
 """
 
+METEOR_SETUP_SCRIPT = r"""#!/bin/bash
+cd /opt/
+
+PACKAGE=meteor-spk-0.1.4
+PACKAGE_FILENAME="$PACKAGE.tar.xz"
+CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
+
+# Fetch meteor-spk tarball if not cached
+if [ ! -f "$CACHE_TARGET" ] ; then
+    curl https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
+fi
+
+# Extract to /opt
+tar xf "$CACHE_TARGET"
+
+# Create symlink so we can rely on the path /opt/meteor-spk
+ln -s "${PACKAGE}" meteor-spk
+
+# Add bash, and its dependencies, so they get mapped into the image.
+# Bash runs the launcher script.
+cp -a /bin/bash /opt/meteor-spk/meteor-spk.deps/bin/
+cp -a /lib/x86_64-linux-gnu/libncurses.so.* /opt/meteor-spk/meteor-spk.deps/lib/x86_64-linux-gnu/
+cp -a /lib/x86_64-linux-gnu/libtinfo.so.* /opt/meteor-spk/meteor-spk.deps/lib/x86_64-linux-gnu/
+
+# Unfortunately, Meteor does not explicitly make it easy to cache packages, but
+# we know experimentally that the package is mostly directly extractable to a
+# user's $HOME/.meteor directory.
+METEOR_RELEASE=1.1.0.2
+METEOR_PLATFORM=os.linux.x86_64
+METEOR_TARBALL_FILENAME="meteor-bootstrap-${METEOR_PLATFORM}.tar.gz"
+METEOR_TARBALL_URL="https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/${METEOR_RELEASE}/${METEOR_TARBALL_FILENAME}"
+METEOR_CACHE_TARGET="/host-dot-sandstorm/caches/${METEOR_TARBALL_FILENAME}"
+
+# Fetch meteor tarball if not cached
+if [ ! -f "$METEOR_CACHE_TARGET" ] ; then
+    curl "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
+    mv "${METEOR_CACHE_TARGET}"{.partial,}
+fi
+
+# Extract as unprivileged user, which is the usual meteor setup
+cd /home/vagrant/
+su -c "tar xf '${METEOR_CACHE_TARGET}'" vagrant
+# Link into global PATH
+ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor
+
+"""
+
+METEOR_BUILD_SCRIPT = r"""#!/bin/bash
+# Make meteor bundle
+
+METEOR_WAREHOUSE_DIR="${METEOR_WAREHOUSE_DIR:-$HOME/.meteor}"
+METEOR_DEV_BUNDLE=$(dirname $(readlink -f "$METEOR_WAREHOUSE_DIR/meteor"))/dev_bundle
+
+cd /opt/app
+meteor build --directory .sandstorm
+(cd .sandstorm/bundle/programs/server && "$METEOR_DEV_BUNDLE/bin/npm" install)
+
+# Copy our launcher script into the bundle so the grain can start up.
+mkdir -p /opt/app/.sandstorm/bundle/opt/app/.sandstorm/
+cp /opt/app/.sandstorm/launcher.sh /opt/app/.sandstorm/bundle/opt/app/.sandstorm/
+
+"""
+
+METEOR_LAUNCHER_SCRIPT = r"""#!/bin/bash
+set -eu
+
+echo '** Starting mongo...'
+/bin/niscud \
+        --fork --port 4002 --dbpath /var --noauth --bind_ip 127.0.0.1 \
+        --nohttpinterface --noprealloc --logpath /var/mongo.log &
+
+# TODO: wait for niscu to be up
+echo '** Starting Meteor...'
+
+export MONGO_URL="mongodb://127.0.0.1:4002/meteor";
+export ROOT_URL="http://127.0.0.1:8000";
+export PORT="8000";
+
+node /main.js
+"""
+
 STATIC_NGINX_SETUP_SCRIPT = r"""
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -487,6 +568,12 @@ STACK_PLUGINS = {
         "build": NGINX_UWSGI_BUILD_SCRIPT,
         "launcher": NGINX_UWSGI_LAUNCHER_SCRIPT,
     },
+    "meteor": {
+        "initargs": "-I /opt/app/.sandstorm/bundle -I /opt/meteor-spk/meteor-spk.deps -A",
+        "setup": METEOR_SETUP_SCRIPT,
+        "build": METEOR_BUILD_SCRIPT,
+        "launcher": METEOR_LAUNCHER_SCRIPT,
+    },
     "static": {
         "setup": STATIC_NGINX_SETUP_SCRIPT,
         "launcher": STATIC_NGINX_LAUNCHER_SCRIPT,
@@ -578,6 +665,11 @@ def setup_vm(args):
     with open(vagrantfile_path, "w") as f:
         f.write(VAGRANTFILE_CONTENTS)
 
+    # Make a note of which stack was used
+    stack_path = os.path.join(sandstorm_dir, "stack")
+    with open(stack_path, "w") as f:
+        f.write(expected_stack_plugin + "\n")
+
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
@@ -588,8 +680,16 @@ def bring_up_vm(args):
 
 def init(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    # Figure out which stack created this runtime, so we can load appropriate additional init args.
+    stack_path = os.path.join(sandstorm_dir, "stack")
+    with open(stack_path) as f:
+        stack = f.read().strip()
+    init_args = STACK_PLUGINS[stack].get("initargs", "")
     # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp -- /opt/app/.sandstorm/launcher.sh")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /opt/app/.sandstorm/launcher.sh".format(init_args))
+    init_hook = STACK_PLUGINS[stack].get("inithook", None)
+    if init_hook:
+        call_vagrant_command(sandstorm_dir, "ssh", "-c", init_hook)
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
