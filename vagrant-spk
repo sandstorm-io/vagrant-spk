@@ -395,6 +395,86 @@ mkdir -p /var/run
 /usr/sbin/nginx -g "daemon off;"
 """
 
+DIY_SETUP_SCRIPT = r"""#!/bin/bash
+# This script is run in the VM once when you first run `vagrant-spk up`.  It is
+# useful for installing system-global dependencies.  It is run exactly once
+# over the lifetime of the VM.
+#
+# This is the ideal place to do things like:
+#
+#    export DEBIAN_FRONTEND=noninteractive
+#    apt-get install nginx nodejs nodejs-legacy python2.7 mysql-server
+#
+# If the packages you're installing here need some configuration adjustments,
+# this is also a good place to do that:
+#
+#    sed --in-place='' \
+#            --expression 's/^user www-data/#user www-data/' \
+#            --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+#            /etc/nginx/nginx.conf
+
+# By default, this script does nothing.  You'll have to modify it as
+# appropriate for your application.
+exit 0
+"""
+
+DIY_BUILD_SCRIPT = r"""#!/bin/bash
+# This script is run in the VM each time you run `vagrant-spk dev`.  This is
+# the ideal place to invoke anything which is normally part of your app's build
+# process - transforming the code in your repository into the collection of files
+# which can actually run the service in production
+#
+# Some examples:
+#
+#   * For a C/C++ application, calling
+#       ./configure && make && make install
+#   * For a Python application, creating a virtualenv and installing
+#     app-specific package dependencies:
+#       virtualenv /opt/app/env
+#       /opt/app/env/bin/pip install -r /opt/app/requirements.txt
+#   * Building static assets from .less or .sass, or bundle and minify JS
+#   * Collecting various build artifacts or assets into a deployment-ready
+#     directory structure
+
+# By default, this script does nothing.  You'll have to modify it as
+# appropriate for your application.
+cd /opt/app
+exit 0
+"""
+
+DIY_LAUNCHER_SCRIPT = r"""#!/bin/bash
+# This script is run every time an instance of our app - aka grain - starts up.
+# This is the entry point for your application both when a grain is first launched
+# and when a grain resumes after being previously shut down.
+#
+# This script is responsible for launching everything your app needs to run.  The
+# thing it should do *last* is:
+#
+#   * Start a process in the foreground listening on port 8000 for HTTP requests.
+#
+# This is how you indicate to the platform that your application is up and
+# ready to receive requests.  Often, this will be something like nginx serving
+# static files and reverse proxying for some other dynamic backend service.
+#
+# Other things you probably want to do in this script include:
+#
+#   * Building folder structures in /var.  /var is the only non-tmpfs folder
+#     mounted read-write in the sandbox, and when a grain is first launched, it
+#     will start out empty.  It will persist between runs of the same grain, but
+#     be unique per app instance.  That is, two instances of the same app have
+#     separate instances of /var.
+#   * Preparing a database and running migrations.  As your package changes
+#     over time and you release updates, you will need to deal with migrating
+#     data from previous schema versions to new ones, since users should not have
+#     to think about such things.
+#   * Launching other daemons your app needs (e.g. mysqld, redis-server, etc.)
+
+# By default, this script does nothing.  You'll have to modify it as
+# appropriate for your application.
+cd /opt/app
+exit 0
+"""
+
 # TODO: add more stack-specific plugins
 STACK_PLUGINS = {
     "lemp": {
@@ -410,6 +490,11 @@ STACK_PLUGINS = {
     "static": {
         "setup": STATIC_NGINX_SETUP_SCRIPT,
         "launcher": STATIC_NGINX_LAUNCHER_SCRIPT,
+    },
+    "diy": {
+        "setup": DIY_SETUP_SCRIPT,
+        "build": DIY_BUILD_SCRIPT,
+        "launcher": DIY_LAUNCHER_SCRIPT,
     },
 }
 
