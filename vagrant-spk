@@ -615,8 +615,8 @@ def ensure_host_sandstorm_folder_exists():
     # but is totally happy if that file is empty.  So ensure a file exists.
     keyring_file = os.path.join(USER_SANDSTORM_DIR, "sandstorm-keyring")
     if not os.path.exists(keyring_file):
-        with open(keyring_file, "wb") as f:
-            pass
+        f = open(keyring_file, "wb")  # Open the file, merely to close it,
+        f.close()  # to cause it to get created.
 
 def setup_vm(args):
     expected_stack_plugin = args.command_specific_args[0]
@@ -636,38 +636,44 @@ def setup_vm(args):
     ensure_host_sandstorm_folder_exists()
 
     # Copy global setup script to e.g. install and configure sandstorm
-    with open(os.path.join(sandstorm_dir, "global-setup.sh"), "w") as f:
-        f.write(GLOBAL_SETUP_SCRIPT)
+    f = open(os.path.join(sandstorm_dir, "global-setup.sh"), "w")
+    f.write(GLOBAL_SETUP_SCRIPT)
+    f.close()
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
-    with open(os.path.join(sandstorm_dir, "setup.sh"), "w") as f:
-        f.write(stack_plugin["setup"])
+    f = open(os.path.join(sandstorm_dir, "setup.sh"), "w")
+    f.write(stack_plugin["setup"])
+    f.close()
 
     # Copy build script, if present, to sandstorm root.  If none is provided by
     # this stack, add an empty one so that users can customize it if needed.
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
-    with open(build_script_path, "w") as f:
-        if 'build' in stack_plugin:
-            f.write(stack_plugin["build"])
-        else:
-            f.write(EMPTY_BUILD_SCRIPT)
+    f = open(build_script_path, "w")
+    if 'build' in stack_plugin:
+        f.write(stack_plugin["build"])
+    else:
+        f.write(EMPTY_BUILD_SCRIPT)
+    f.close()
     os.chmod(build_script_path, 0755)
 
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
-    with open(launcher_script_path, "w") as f:
-        f.write(stack_plugin["launcher"])
+    f = open(launcher_script_path, "w")
+    f.write(stack_plugin["launcher"])
+    f.close()
     os.chmod(launcher_script_path, 0755)
 
     # Copy in Vagrantfile
     vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
-    with open(vagrantfile_path, "w") as f:
-        f.write(VAGRANTFILE_CONTENTS)
+    f = open(vagrantfile_path, "w")
+    f.write(VAGRANTFILE_CONTENTS)
+    f.close()
 
     # Make a note of which stack was used
     stack_path = os.path.join(sandstorm_dir, "stack")
-    with open(stack_path, "w") as f:
-        f.write(expected_stack_plugin + "\n")
+    f = open(stack_path, "w")
+    f.write(expected_stack_plugin + "\n")
+    f.close()
 
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -681,8 +687,9 @@ def init(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Figure out which stack created this runtime, so we can load appropriate additional init args.
     stack_path = os.path.join(sandstorm_dir, "stack")
-    with open(stack_path) as f:
-        stack = f.read().strip()
+    f = open(stack_path)
+    stack = f.read().strip()
+    f.close()
     init_args = STACK_PLUGINS[stack].get("initargs", "")
     # Initialize the package with spk init
     call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /opt/app/.sandstorm/launcher.sh".format(init_args))
