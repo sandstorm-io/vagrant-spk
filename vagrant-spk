@@ -20,6 +20,8 @@
 # vagrant-spk dev
 # vagrant-spk pack output.spk
 
+from __future__ import print_function
+
 import argparse
 import os
 import shutil
@@ -595,7 +597,7 @@ def check_dot_sandstorm():
 def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
     command.extend(command_args)
-    print "Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir)
+    print("Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
     return subprocess.check_call(command, cwd=sandstorm_dir)
 
 def ensure_host_sandstorm_folder_exists():
@@ -605,11 +607,11 @@ def ensure_host_sandstorm_folder_exists():
     # keyring.
     USER_SANDSTORM_DIR = os.path.join(os.path.expanduser("~"), ".sandstorm")
     if not os.path.exists(USER_SANDSTORM_DIR):
-        print "Creating {} to hold developer keys.".format(USER_SANDSTORM_DIR)
+        print("Creating {} to hold developer keys.".format(USER_SANDSTORM_DIR))
         os.makedirs(USER_SANDSTORM_DIR)
     USER_SANDSTORM_CACHE_DIR = os.path.join(USER_SANDSTORM_DIR, "caches")
     if not os.path.exists(USER_SANDSTORM_CACHE_DIR):
-        print "Creating {} to hold sandstorm installer caches.".format(USER_SANDSTORM_CACHE_DIR)
+        print("Creating {} to hold sandstorm installer caches.".format(USER_SANDSTORM_CACHE_DIR))
         os.makedirs(USER_SANDSTORM_CACHE_DIR)
     # Sandstorm is unhappy if you give it a keyring path that doesn't exist,
     # but is totally happy if that file is empty.  So ensure a file exists.
@@ -627,10 +629,10 @@ def setup_vm(args):
         raise Exception("Stack plugins require both 'setup' and 'launcher' scripts.")
 
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    print "Initializing .sandstorm directory in {}".format(sandstorm_dir)
+    print("Initializing .sandstorm directory in {}".format(sandstorm_dir))
     # Create .sandstorm directory
     if not os.path.isdir(sandstorm_dir):
-        os.makedirs(sandstorm_dir, mode=0755)
+        os.makedirs(sandstorm_dir, mode=0o755)
 
     # Make sure ~/.sandstorm exists for storing signing keys
     ensure_host_sandstorm_folder_exists()
@@ -651,13 +653,13 @@ def setup_vm(args):
             f.write(stack_plugin["build"])
         else:
             f.write(EMPTY_BUILD_SCRIPT)
-    os.chmod(build_script_path, 0755)
+    os.chmod(build_script_path, 0o755)
 
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "w") as f:
         f.write(stack_plugin["launcher"])
-    os.chmod(launcher_script_path, 0755)
+    os.chmod(launcher_script_path, 0o755)
 
     # Copy in Vagrantfile
     vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
@@ -700,7 +702,7 @@ def dev(args):
 
 def pack(args):
     output_spk = args.command_specific_args[0]
-    print output_spk
+    print(output_spk)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # spk doesn't like to build packages on the vboxsf filesystem due to some
     # oddity when you unlink an open file, so we build the package in the guest
@@ -711,15 +713,15 @@ def pack(args):
         "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
     ]))
     os.rename("sandstorm-package.spk", output_spk)
-    print "package produced at {}".format(output_spk)
+    print("package produced at {}".format(output_spk))
 
 def halt(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    print call_vagrant_command(sandstorm_dir, "halt")
+    call_vagrant_command(sandstorm_dir, "halt")
 
 def destroy(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    print call_vagrant_command(sandstorm_dir, "destroy", "--force")
+    call_vagrant_command(sandstorm_dir, "destroy", "--force")
 
 def wipe(args):
     destroy(args)
