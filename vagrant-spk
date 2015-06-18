@@ -744,6 +744,9 @@ def wipe(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     shutil.rmtree(sandstorm_dir)
 
+def global_status(args):
+    return subprocess.check_call(["vagrant", "global-status"])
+
 def ssh(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh")
@@ -758,6 +761,7 @@ def main():
             'halt': halt,
             'destroy': destroy,
             'wipe': wipe,
+            'global-status': global_status,
             'ssh': ssh,
     }
     parser = argparse.ArgumentParser(prog=sys.argv[0])
