@@ -198,6 +198,14 @@ sed --in-place='' \
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
         /etc/mysql/my.cnf
+# patch mysql conf to use smaller transaction logs to save disk space
+cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
+[mysqld]
+# Set the transaction log file to the minimum allowed size to save disk space.
+innodb_log_file_size = 1048576
+# Set the main data file to grow by 1MB at a time, rather than 8MB at a time.
+innodb_autoextend_increment = 1
+EOF
 # patch nginx conf to not bother trying to setuid, since we're not root
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
@@ -293,6 +301,14 @@ ln -s /etc/nginx/sites-available/sandstorm-python /etc/nginx/sites-enabled/sands
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
         /etc/mysql/my.cnf
+# patch mysql conf to use smaller transaction logs to save disk space
+[mysqld]
+cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
+# Set the transaction log file to the minimum allowed size to save disk space.
+innodb_log_file_size = 1048576
+# Set the main data file to grow by 1MB at a time, rather than 8MB at a time.
+innodb_autoextend_increment = 1
+EOF
 # patch nginx conf to not bother trying to setuid, since we're not root
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
