@@ -180,6 +180,9 @@ ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstor
 service nginx stop
 service php5-fpm stop
 service mysql stop
+systemctl disable nginx
+systemctl disable php5-fpm
+systemctl disable mysql
 # patch /etc/php5/fpm/pool.d/www.conf to not change uid/gid to www-data
 sed --in-place='' \
         --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
@@ -313,6 +316,8 @@ sed --in-place='' \
         /etc/nginx/nginx.conf
 service nginx stop
 service mysql stop
+systemctl disable nginx
+systemctl disable mysql
 """
 
 NGINX_UWSGI_BUILD_SCRIPT = r"""#!/bin/bash
@@ -476,6 +481,7 @@ sed --in-place='' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
         /etc/nginx/nginx.conf
 service nginx stop
+systemctl disable nginx
 """
 
 STATIC_NGINX_LAUNCHER_SCRIPT = r"""#!/bin/bash
