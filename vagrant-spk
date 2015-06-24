@@ -131,9 +131,6 @@ if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm
     echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
     sudo service sandstorm restart
 fi
-# stop some other services that are running by default in vagrant VMs
-sudo service puppet stop
-sudo service chef-client stop
 # Enable apt-cacher-ng proxy to make things faster if one appears to be running on the gateway IP
 GATEWAY_IP=$(ip route  | grep ^default  | cut -d ' ' -f 3)
 if nc -z "$GATEWAY_IP" 3142 ; then
