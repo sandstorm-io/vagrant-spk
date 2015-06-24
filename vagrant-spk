@@ -221,7 +221,7 @@ cat > /etc/nginx/conf.d/50sandstorm.conf << EOF
 EOF
 # Adjust fastcgi_params to use the patched fe_https
 sed --in-place='' \
-        --expression 's/^fastcgi_param\tHTTPS.*$/fastcgi_param\tHTTPS\t\t\$fe_https if_not_empty;/' \
+        --expression 's/^fastcgi_param *HTTPS.*$/fastcgi_param  HTTPS               \$fe_https if_not_empty;/' \
         /etc/nginx/fastcgi_params
 """
 
