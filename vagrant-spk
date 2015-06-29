@@ -432,12 +432,12 @@ METEOR_WAREHOUSE_DIR="${METEOR_WAREHOUSE_DIR:-$HOME/.meteor}"
 METEOR_DEV_BUNDLE=$(dirname $(readlink -f "$METEOR_WAREHOUSE_DIR/meteor"))/dev_bundle
 
 cd /opt/app
-meteor build --directory .sandstorm
-(cd .sandstorm/bundle/programs/server && "$METEOR_DEV_BUNDLE/bin/npm" install)
+meteor build --directory /home/vagrant/
+(cd /home/vagrant/bundle/programs/server && "$METEOR_DEV_BUNDLE/bin/npm" install)
 
 # Copy our launcher script into the bundle so the grain can start up.
-mkdir -p /opt/app/.sandstorm/bundle/opt/app/.sandstorm/
-cp /opt/app/.sandstorm/launcher.sh /opt/app/.sandstorm/bundle/opt/app/.sandstorm/
+mkdir -p /home/vagrant/bundle/opt/app/.sandstorm/
+cp /opt/app/.sandstorm/launcher.sh /home/vagrant/bundle/opt/app/.sandstorm/
 
 """
 
@@ -589,7 +589,7 @@ STACK_PLUGINS = {
         "launcher": NGINX_UWSGI_LAUNCHER_SCRIPT,
     },
     "meteor": {
-        "initargs": "-I /opt/app/.sandstorm/bundle -I /opt/meteor-spk/meteor-spk.deps -A",
+        "initargs": "-I /home/vagrant/bundle -I /opt/meteor-spk/meteor-spk.deps -A",
         "setup": METEOR_SETUP_SCRIPT,
         "build": METEOR_BUILD_SCRIPT,
         "launcher": METEOR_LAUNCHER_SCRIPT,
