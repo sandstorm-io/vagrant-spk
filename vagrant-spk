@@ -657,17 +657,17 @@ def setup_vm(args):
     ensure_host_sandstorm_folder_exists()
 
     # Copy global setup script to e.g. install and configure sandstorm
-    with open(os.path.join(sandstorm_dir, "global-setup.sh"), "w") as f:
+    with open(os.path.join(sandstorm_dir, "global-setup.sh"), "wb") as f:
         f.write(GLOBAL_SETUP_SCRIPT)
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
-    with open(os.path.join(sandstorm_dir, "setup.sh"), "w") as f:
+    with open(os.path.join(sandstorm_dir, "setup.sh"), "wb") as f:
         f.write(stack_plugin["setup"])
 
     # Copy build script, if present, to sandstorm root.  If none is provided by
     # this stack, add an empty one so that users can customize it if needed.
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
-    with open(build_script_path, "w") as f:
+    with open(build_script_path, "wb") as f:
         if 'build' in stack_plugin:
             f.write(stack_plugin["build"])
         else:
@@ -676,7 +676,7 @@ def setup_vm(args):
 
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
-    with open(launcher_script_path, "w") as f:
+    with open(launcher_script_path, "wb") as f:
         f.write(stack_plugin["launcher"])
     os.chmod(launcher_script_path, 0o755)
 
