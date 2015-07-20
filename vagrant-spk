@@ -41,7 +41,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "debian/jessie64"
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
-    # Configure vbguest appropriately
+    # vagrant-vbguest is a Vagrant plugin that upgrades
+    # the version of VirtualBox Guest Additions within each
+    # guest. If you have the vagrant-vbguest plugin, then it
+    # needs to know how to compile kernel modules, etc., and so
+    # we give it this hint about operating system type.
     config.vm.guest = "debian"
   end
 
