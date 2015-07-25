@@ -18,8 +18,8 @@ vendor/python.msi: vendor | state/wineprefix
 	touch vendor/python.msi
 
 vendor/python.msi.installed: | vendor/python.msi
-	cp vendor/python.msi python-tmp.msi
-	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine msiexec /a vendor/python-tmp.msi
+	cp vendor/python.msi vendor/python-tmp.msi
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine msiexec /i vendor/python-tmp.msi
 	touch vendor/python.msi.installed
 
 state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe: | vendor/python.msi.installed vendor/pywin32.exe.installed
@@ -32,8 +32,8 @@ vendor/pywin32.exe.installed: | vendor/pywin32.exe
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine vendor/pywin32.exe
 	touch vendor/pywin32.exe.installed
 
-dist/vagrant-spk/vagrant-spk.exe: ../vagrant-spk | state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe
-	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine c:/python27/Scripts/pyinstaller.exe ../vagrant-spk
+dist/vagrant-spk.exe: ../vagrant-spk | state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine c:/python27/Scripts/pyinstaller -F ../vagrant-spk
 
 vendor/innosetup.exe: | vendor
 	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
@@ -42,5 +42,5 @@ vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine vendor/innosetup.exe
 	touch vendor/innosetup.exe.installed
 
-dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk/vagrant-spk.exe | vendor/innosetup.exe.installed
+dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.exe.installed
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:/program files/inno setup 5/iscc.exe' windows-installer.iss

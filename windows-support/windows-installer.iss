@@ -35,7 +35,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: modifypath; Description: &Add application directory to your environmental path
 
 [Files]
-Source: "dist\vagrant-spk\vagrant-spk.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\vagrant-spk.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Code]
