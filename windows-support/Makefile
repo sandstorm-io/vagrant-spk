@@ -39,3 +39,6 @@ vendor/innosetup.exe: vendor
 vendor/innosetup.exe.installed: state/wineprefix vendor/innosetup.exe
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine vendor/innosetup.exe
 	touch vendor/innosetup.exe.installed
+
+dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk/vagrant-spk.exe vendor/innosetup.exe.installed
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:\\program files\\inno setup 5\\iscc.exe' windows-installer.iss
