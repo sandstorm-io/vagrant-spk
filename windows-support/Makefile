@@ -1,4 +1,4 @@
-all: dist/vagrant-spk/vagrant-spk.exe
+all: dist/innosetup/vagrant-spk-setup.exe
 
 wine: /usr/bin/wine
 	sudo apt-get install wine:i386
@@ -13,32 +13,34 @@ state/wineprefix:
 vendor:
 	mkdir -p vendor
 
-vendor/python.msi: vendor
+vendor/python.msi: vendor | state/wineprefix
 	wget https://www.python.org/ftp/python/2.7.10/python-2.7.10.msi -O vendor/python.msi
-	touch vendor/python.msi  # to avoid timestamp skew
+	touch vendor/python.msi
 
-vendor/python.msi.installed: state/wineprefix vendor/python.msi
-	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine msiexec /i vendor/python.msi
+vendor/python.msi.installed: | vendor/python.msi
+	cp vendor/python.msi python-tmp.msi
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine msiexec /a vendor/python-tmp.msi
 	touch vendor/python.msi.installed
 
-state/wineprefix/drive_c/python27/scripts/pyinstaller: vendor/python.msi.installed vendor/pywin32.exe.installed
+state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe: | vendor/python.msi.installed vendor/pywin32.exe.installed
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:/python27/python.exe' -m pip install pyinstaller
 
-vendor/pywin32.exe: vendor
+vendor/pywin32.exe: | vendor
 	wget http://iweb.dl.sourceforge.net/project/pywin32/pywin32/Build%20219/pywin32-219.win32-py2.7.exe -O vendor/pywin32.exe
 
-vendor/pywin32.exe.installed: vendor/pywin32.exe
+vendor/pywin32.exe.installed: | vendor/pywin32.exe
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine vendor/pywin32.exe
+	touch vendor/pywin32.exe.installed
 
-dist/vagrant-spk/vagrant-spk.exe: state/wineprefix/drive_c/python27/scripts/pyinstaller ../vagrant-spk
-	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine c:/python27/scripts/pyinstaller ../vagrant-spk
+dist/vagrant-spk/vagrant-spk.exe: ../vagrant-spk | state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine c:/python27/Scripts/pyinstaller.exe ../vagrant-spk
 
-vendor/innosetup.exe: vendor
+vendor/innosetup.exe: | vendor
 	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
 
-vendor/innosetup.exe.installed: state/wineprefix vendor/innosetup.exe
+vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine vendor/innosetup.exe
 	touch vendor/innosetup.exe.installed
 
-dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk/vagrant-spk.exe vendor/innosetup.exe.installed
-	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:\\program files\\inno setup 5\\iscc.exe' windows-installer.iss
+dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk/vagrant-spk.exe | vendor/innosetup.exe.installed
+	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:/program files/inno setup 5/iscc.exe' windows-installer.iss
