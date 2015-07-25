@@ -263,6 +263,13 @@ rm -rf /var/run
 mkdir -p /var/run
 mkdir -p /var/run/mysqld
 
+# Cleanup log files
+FILES="$(find /var/log -name '*.log')"
+for f in $FILES
+do
+  tail $f | tee $f
+done
+
 # Ensure mysql tables created
 HOME=/etc/mysql /usr/bin/mysql_install_db --force
 
