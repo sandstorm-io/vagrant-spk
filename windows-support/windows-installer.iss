@@ -35,7 +35,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: modifypath; Description: &Add application directory to your environmental path
 
 [Files]
+; vagrant-spk itself
 Source: "dist\vagrant-spk.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; ssh binary + required DLLs, so that `vagrant ssh` can work
+Source: "vendor\msysgit\ssh.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "vendor\msysgit\msys-crypto-1.0.0.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "vendor\msysgit\msys-minires.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "vendor\msysgit\msys-1.0.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "vendor\msysgit\msys-z.dll"; DestDir: "{app}"; Flags: ignoreversion
+
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Code]

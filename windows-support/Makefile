@@ -44,3 +44,10 @@ vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 
 dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.exe.installed
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine 'c:/program files/inno setup 5/iscc.exe' windows-installer.iss
+
+vendor/msysgit.7z:
+	wget https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20150319/PortableGit-1.9.5-preview20150319.7z -O vendor/msysgit.7z
+
+vendor/msysgit/bin:
+	mkdir -p vendor/msysgit
+	(cd vendor/msysgit ; 7z e -aoa ../msysgit.7z)
