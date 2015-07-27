@@ -1,5 +1,8 @@
 all: dist/innosetup/vagrant-spk-setup.exe
 
+clean:
+	rm -rf state build vendor dist ../build ../dist vagrant-spk.spec
+
 wine: /usr/bin/wine
 	sudo apt-get install wine:i386
 
