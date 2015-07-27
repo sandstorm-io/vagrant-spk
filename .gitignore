@@ -1,0 +1,7 @@
+# The following files are auto-generated from the build process for
+# the Windows vagrant-spk EXE.
+build/
+vendor/
+windows-support/state/
+dist/
+vagrant-spk.spec
