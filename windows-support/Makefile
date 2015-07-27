@@ -6,9 +6,6 @@ clean:
 wine: /usr/bin/wine
 	sudo apt-get install wine:i386
 
-state:
-	mkdir -p
-
 state/wineprefix:
 	mkdir -p state/wineprefix
 	WINEPREFIX=$$PWD/state/wineprefix WINEARCH=win32 wine wineboot
