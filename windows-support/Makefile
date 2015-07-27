@@ -13,7 +13,7 @@ state/wineprefix:
 vendor:
 	mkdir -p vendor
 
-vendor/python.msi: vendor | state/wineprefix
+vendor/python.msi: | vendor state/wineprefix
 	wget https://www.python.org/ftp/python/2.7.10/python-2.7.10.msi -O vendor/python.msi
 	touch vendor/python.msi
 
