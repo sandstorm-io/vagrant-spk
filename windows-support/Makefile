@@ -37,7 +37,7 @@ vendor/pywin32.exe.installed: | vendor/pywin32.exe
 	unzip vendor/pywin32.exe || true
 	mv PLATLIB/* SCRIPTS/* state/wineprefix/drive_c/Python27/Lib/site-packages/
 	rmdir PLATLIB SCRIPTS
-	$(WINEARGS) $(WINE) python state/wineprefix/drive_c/Python27/Lib/site-packages/pywin32_postinstall.py -install
+	$(WINEARGS) $(WINE) 'c:/python27/python.exe' state/wineprefix/drive_c/Python27/Lib/site-packages/pywin32_postinstall.py -install
 	touch vendor/pywin32.exe.installed
 
 dist/vagrant-spk.exe: ../vagrant-spk | state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe
