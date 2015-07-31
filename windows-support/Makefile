@@ -51,8 +51,9 @@ vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 	touch vendor/innosetup.exe.installed
 
 dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.exe.installed vendor/msysgit.7z vendor/msysgit/bin
-	# It's possible we need to make this (x86) conditional on the 64-bitness of your wine install.
-	# For now, assume people have 64-bit wine and carry on.
+	# Some WINE installs are seemingly 64-bit but install InnoSetup to Program Files, not
+	# Program Files (x86). We work around this with a symlink.
+	if [ ! -d 'state/wineprefix/drive_c/Program Files (x86)' ] ; then ln -s 'Program Files' 'state/wineprefix/drive_c/Program Files (x86)' ; fi
 	$(WINEARGS) $(WINE) 'c:/program files (x86)/inno setup 5/iscc.exe' windows-installer.iss
 
 vendor/msysgit.7z:
