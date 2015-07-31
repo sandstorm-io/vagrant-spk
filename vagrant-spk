@@ -219,6 +219,7 @@ EOF
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        --expression 's/^\s*error_log.*/error_log stderr;/' \
         /etc/nginx/nginx.conf
 # Add a conf snippet providing what sandstorm-http-bridge says the protocol is as var fe_https
 cat > /etc/nginx/conf.d/50sandstorm.conf << EOF
@@ -322,6 +323,7 @@ EOF
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        --expression 's/^error_log.*/error_log stderr;/' \
         /etc/nginx/nginx.conf
 service nginx stop
 service mysql stop
@@ -488,6 +490,7 @@ ln -s /etc/nginx/sites-available/sandstorm-static /etc/nginx/sites-enabled/sands
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        --expression 's/^error_log.*/error_log stderr;/' \
         /etc/nginx/nginx.conf
 service nginx stop
 systemctl disable nginx
@@ -521,6 +524,7 @@ DIY_SETUP_SCRIPT = r"""#!/bin/bash
 #    sed --in-place='' \
 #            --expression 's/^user www-data/#user www-data/' \
 #            --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+#            --expression 's/^error_log.*/error_log stderr;/' \
 #            /etc/nginx/nginx.conf
 
 # By default, this script does nothing.  You'll have to modify it as
