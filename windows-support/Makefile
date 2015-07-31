@@ -1,7 +1,7 @@
 all: dist/innosetup/vagrant-spk-setup.exe
 
-WINE:=wine
-WINEARGS:=WINEDEBUG=-all WINEPREFIX=$$PWD/state/wineprefix
+WINE := wine
+WINEARGS := WINEDEBUG=-all WINEPREFIX=$$PWD/state/wineprefix
 
 clean:
 	rm -f dist/innosetup/vagrant-spk-setup.exe
