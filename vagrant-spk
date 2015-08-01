@@ -116,7 +116,7 @@ end
 """
 
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
-set -eu
+set -euo pipefail
 echo localhost > /etc/hostname
 hostname localhost
 curl https://install.sandstorm.io/ > /host-dot-sandstorm/caches/install.sh
@@ -148,6 +148,7 @@ fi
 """
 
 EMPTY_BUILD_SCRIPT = r"""#!/bin/bash
+set -euo pipefail
 # This is a script that is run every time you call "vagrant-spk dev".
 # It is intended to do platform-and-repository-specific build steps.  You
 # might customize it to do any of the following, or more:
@@ -159,460 +160,6 @@ EMPTY_BUILD_SCRIPT = r"""#!/bin/bash
 
 exit 0
 """
-
-LEMP_SETUP_SCRIPT = r"""#!/bin/bash
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y nginx php5-fpm php5-mysql php5-cli php5-curl git php5-dev mysql-server
-unlink /etc/nginx/sites-enabled/default
-cat > /etc/nginx/sites-available/sandstorm-php <<EOF
-server {
-    listen 8000 default_server;
-    listen [::]:8000 default_server ipv6only=on;
-
-    server_name localhost;
-    root /opt/app;
-    location / {
-        index index.php;
-        try_files \$uri \$uri/ =404;
-    }
-    location ~ \\.php\$ {
-        fastcgi_pass unix:/var/run/php5-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_split_path_info ^(.+\\.php)(/.+)\$;
-        fastcgi_param  SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        include fastcgi_params;
-    }
-}
-EOF
-ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
-service nginx stop
-service php5-fpm stop
-service mysql stop
-systemctl disable nginx
-systemctl disable php5-fpm
-systemctl disable mysql
-# patch /etc/php5/fpm/pool.d/www.conf to not change uid/gid to www-data
-sed --in-place='' \
-        --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
-        --expression='s/^listen.group = www-data/#listen.group = www-data/' \
-        --expression='s/^user = www-data/#user = www-data/' \
-        --expression='s/^group = www-data/#group = www-data/' \
-        /etc/php5/fpm/pool.d/www.conf
-# patch /etc/php5/fpm/php-fpm.conf to not have a pidfile
-sed --in-place='' \
-        --expression='s/^pid =/#pid =/' \
-        /etc/php5/fpm/php-fpm.conf
-# patch mysql conf to not change uid
-sed --in-place='' \
-        --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
-        /etc/mysql/my.cnf
-# patch mysql conf to use smaller transaction logs to save disk space
-cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
-[mysqld]
-# Set the transaction log file to the minimum allowed size to save disk space.
-innodb_log_file_size = 1048576
-# Set the main data file to grow by 1MB at a time, rather than 8MB at a time.
-innodb_autoextend_increment = 1
-EOF
-# patch nginx conf to not bother trying to setuid, since we're not root
-sed --in-place='' \
-        --expression 's/^user www-data/#user www-data/' \
-        --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
-        /etc/nginx/nginx.conf
-# Add a conf snippet providing what sandstorm-http-bridge says the protocol is as var fe_https
-cat > /etc/nginx/conf.d/50sandstorm.conf << EOF
-    # Trust the sandstorm-http-bridge's X-Forwarded-Proto.
-    map \$http_x_forwarded_proto \$fe_https {
-        default "";
-        https on;
-    }
-EOF
-# Adjust fastcgi_params to use the patched fe_https
-sed --in-place='' \
-        --expression 's/^fastcgi_param *HTTPS.*$/fastcgi_param  HTTPS               \$fe_https if_not_empty;/' \
-        /etc/nginx/fastcgi_params
-"""
-
-LEMP_BUILD_SCRIPT = r"""#!/bin/bash
-# Checks if there's a composer.json, and if so, installs/runs composer.
-
-set -eu
-
-cd /opt/app
-
-if [ -f /opt/app/composer.json ] ; then
-    if [ ! -f composer.phar ] ; then
-        curl -sS https://getcomposer.org/installer | php
-    fi
-    php composer.phar install
-fi
-"""
-
-LEMP_LAUNCHER_SCRIPT = r"""#!/bin/bash
-
-# Create a bunch of folders under the clean /var that php, nginx, and mysql expect to exist
-mkdir -p /var/lib/mysql
-mkdir -p /var/lib/nginx
-mkdir -p /var/log
-mkdir -p /var/log/mysql
-mkdir -p /var/log/nginx
-# Wipe /var/run, since pidfiles and socket files from previous launches should go away
-# TODO someday: I'd prefer a tmpfs for these.
-rm -rf /var/run
-mkdir -p /var/run
-mkdir -p /var/run/mysqld
-
-# Ensure mysql tables created
-HOME=/etc/mysql /usr/bin/mysql_install_db --force
-
-# Spawn mysqld, php
-HOME=/etc/mysql /usr/sbin/mysqld &
-/usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
-# Wait until mysql and php have bound their sockets, indicating readiness
-while [ ! -e /var/run/mysqld/mysqld.sock ] ; do
-    echo "waiting for mysql to be available at /var/run/mysqld/mysqld.sock"
-    sleep .2
-done
-while [ ! -e /var/run/php5-fpm.sock ] ; do
-    echo "waiting for php5-fpm to be available at /var/run/php5-fpm.sock"
-    sleep .2
-done
-
-# Start nginx.
-/usr/sbin/nginx -g "daemon off;"
-"""
-
-NGINX_UWSGI_SETUP_SCRIPT = r"""
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv
-# Set up nginx conf
-unlink /etc/nginx/sites-enabled/default
-cat > /etc/nginx/sites-available/sandstorm-python <<EOF
-server {
-    listen 8000 default_server;
-    listen [::]:8000 default_server ipv6only=on;
-
-    server_name localhost;
-    root /opt/app;
-    location /static/ {
-        alias /opt/app/static/;
-    }
-    location / {
-        uwsgi_pass unix:///var/run/uwsgi.sock;
-        include uwsgi_params;
-    }
-}
-EOF
-ln -s /etc/nginx/sites-available/sandstorm-python /etc/nginx/sites-enabled/sandstorm-python
-# patch mysql conf to not change uid
-sed --in-place='' \
-        --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
-        /etc/mysql/my.cnf
-# patch mysql conf to use smaller transaction logs to save disk space
-cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
-[mysqld]
-# Set the transaction log file to the minimum allowed size to save disk space.
-innodb_log_file_size = 1048576
-# Set the main data file to grow by 1MB at a time, rather than 8MB at a time.
-innodb_autoextend_increment = 1
-EOF
-# patch nginx conf to not bother trying to setuid, since we're not root
-sed --in-place='' \
-        --expression 's/^user www-data/#user www-data/' \
-        --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
-        /etc/nginx/nginx.conf
-service nginx stop
-service mysql stop
-systemctl disable nginx
-systemctl disable mysql
-"""
-
-NGINX_UWSGI_BUILD_SCRIPT = r"""#!/bin/bash
-VENV=/opt/app/env
-if [ ! -d $VENV ] ; then
-    virtualenv $VENV
-else
-    echo "$VENV exists, moving on"
-fi
-
-if [ -f /opt/app/requirements.txt ] ; then
-    $VENV/bin/pip install -r /opt/app/requirements.txt
-fi
-"""
-
-NGINX_UWSGI_LAUNCHER_SCRIPT = r"""#!/bin/bash
-# something something folders
-mkdir -p /var/lib/mysql
-mkdir -p /var/lib/nginx
-mkdir -p /var/log
-mkdir -p /var/log/mysql
-mkdir -p /var/log/nginx
-# Wipe /var/run, since pidfiles and socket files from previous launches should go away
-# TODO someday: I'd prefer a tmpfs for these.
-rm -rf /var/run
-mkdir -p /var/run
-mkdir -p /var/run/mysqld
-
-UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
-
-# Ensure mysql tables created
-HOME=/etc/mysql /usr/bin/mysql_install_db --force
-
-# Spawn mysqld
-HOME=/etc/mysql /usr/sbin/mysqld &
-
-MYSQL_SOCKET_FILE=/var/run/mysqld/mysqld.sock
-# Wait for mysql to bind its socket
-while [ ! -e $MYSQL_SOCKET_FILE ] ; do
-    echo "waiting for mysql to be available at $MYSQL_SOCKET_FILE"
-    sleep .2
-done
-
-# Spawn uwsgi
-HOME=/var uwsgi \
-        --socket $UWSGI_SOCKET_FILE \
-        --plugin python \
-        --virtualenv /opt/app/env \
-        --wsgi-file /opt/app/main.py &
-
-# Wait for uwsgi to bind its socket
-while [ ! -e $UWSGI_SOCKET_FILE ] ; do
-    echo "waiting for uwsgi to be available at $UWSGI_SOCKET_FILE"
-    sleep .2
-done
-
-# Start nginx.
-/usr/sbin/nginx -g "daemon off;"
-"""
-
-METEOR_SETUP_SCRIPT = r"""#!/bin/bash
-cd /opt/
-
-PACKAGE=meteor-spk-0.1.4
-PACKAGE_FILENAME="$PACKAGE.tar.xz"
-CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
-
-# Fetch meteor-spk tarball if not cached
-if [ ! -f "$CACHE_TARGET" ] ; then
-    curl https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
-fi
-
-# Extract to /opt
-tar xf "$CACHE_TARGET"
-
-# Create symlink so we can rely on the path /opt/meteor-spk
-ln -s "${PACKAGE}" meteor-spk
-
-# Add bash, and its dependencies, so they get mapped into the image.
-# Bash runs the launcher script.
-cp -a /bin/bash /opt/meteor-spk/meteor-spk.deps/bin/
-cp -a /lib/x86_64-linux-gnu/libncurses.so.* /opt/meteor-spk/meteor-spk.deps/lib/x86_64-linux-gnu/
-cp -a /lib/x86_64-linux-gnu/libtinfo.so.* /opt/meteor-spk/meteor-spk.deps/lib/x86_64-linux-gnu/
-
-# Unfortunately, Meteor does not explicitly make it easy to cache packages, but
-# we know experimentally that the package is mostly directly extractable to a
-# user's $HOME/.meteor directory.
-METEOR_RELEASE=1.1.0.2
-METEOR_PLATFORM=os.linux.x86_64
-METEOR_TARBALL_FILENAME="meteor-bootstrap-${METEOR_PLATFORM}.tar.gz"
-METEOR_TARBALL_URL="https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/${METEOR_RELEASE}/${METEOR_TARBALL_FILENAME}"
-METEOR_CACHE_TARGET="/host-dot-sandstorm/caches/${METEOR_TARBALL_FILENAME}"
-
-# Fetch meteor tarball if not cached
-if [ ! -f "$METEOR_CACHE_TARGET" ] ; then
-    curl "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
-    mv "${METEOR_CACHE_TARGET}"{.partial,}
-fi
-
-# Extract as unprivileged user, which is the usual meteor setup
-cd /home/vagrant/
-su -c "tar xf '${METEOR_CACHE_TARGET}'" vagrant
-# Link into global PATH
-ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor
-
-"""
-
-METEOR_BUILD_SCRIPT = r"""#!/bin/bash
-# Make meteor bundle
-
-METEOR_WAREHOUSE_DIR="${METEOR_WAREHOUSE_DIR:-$HOME/.meteor}"
-METEOR_DEV_BUNDLE=$(dirname $(readlink -f "$METEOR_WAREHOUSE_DIR/meteor"))/dev_bundle
-
-cd /opt/app
-meteor build --directory /home/vagrant/
-(cd /home/vagrant/bundle/programs/server && "$METEOR_DEV_BUNDLE/bin/npm" install)
-
-# Copy our launcher script into the bundle so the grain can start up.
-mkdir -p /home/vagrant/bundle/opt/app/.sandstorm/
-cp /opt/app/.sandstorm/launcher.sh /home/vagrant/bundle/opt/app/.sandstorm/
-
-"""
-
-METEOR_LAUNCHER_SCRIPT = r"""#!/bin/bash
-set -eu
-
-echo '** Starting mongo...'
-/bin/niscud \
-        --fork --port 4002 --dbpath /var --noauth --bind_ip 127.0.0.1 \
-        --nohttpinterface --noprealloc --logpath /var/mongo.log &
-
-# TODO: wait for niscu to be up
-echo '** Starting Meteor...'
-
-export MONGO_URL="mongodb://127.0.0.1:4002/meteor";
-export ROOT_URL="http://127.0.0.1:8000";
-export PORT="8000";
-
-node /main.js
-"""
-
-STATIC_NGINX_SETUP_SCRIPT = r"""
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y nginx
-# Set up nginx conf
-unlink /etc/nginx/sites-enabled/default
-cat > /etc/nginx/sites-available/sandstorm-static <<EOF
-server {
-    listen 8000 default_server;
-    listen [::]:8000 default_server ipv6only=on;
-
-    server_name localhost;
-    root /opt/app;
-}
-EOF
-ln -s /etc/nginx/sites-available/sandstorm-static /etc/nginx/sites-enabled/sandstorm-static
-# patch nginx conf to not bother trying to setuid, since we're not root
-sed --in-place='' \
-        --expression 's/^user www-data/#user www-data/' \
-        --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
-        /etc/nginx/nginx.conf
-service nginx stop
-systemctl disable nginx
-"""
-
-STATIC_NGINX_LAUNCHER_SCRIPT = r"""#!/bin/bash
-mkdir -p /var/lib/nginx
-mkdir -p /var/log/nginx
-# Wipe /var/run, since pidfiles and socket files from previous launches should go away
-# TODO someday: I'd prefer a tmpfs for these.
-rm -rf /var/run
-mkdir -p /var/run
-
-# Start nginx.
-/usr/sbin/nginx -g "daemon off;"
-"""
-
-DIY_SETUP_SCRIPT = r"""#!/bin/bash
-# This script is run in the VM once when you first run `vagrant-spk up`.  It is
-# useful for installing system-global dependencies.  It is run exactly once
-# over the lifetime of the VM.
-#
-# This is the ideal place to do things like:
-#
-#    export DEBIAN_FRONTEND=noninteractive
-#    apt-get install -y nginx nodejs nodejs-legacy python2.7 mysql-server
-#
-# If the packages you're installing here need some configuration adjustments,
-# this is also a good place to do that:
-#
-#    sed --in-place='' \
-#            --expression 's/^user www-data/#user www-data/' \
-#            --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
-#            /etc/nginx/nginx.conf
-
-# By default, this script does nothing.  You'll have to modify it as
-# appropriate for your application.
-exit 0
-"""
-
-DIY_BUILD_SCRIPT = r"""#!/bin/bash
-# This script is run in the VM each time you run `vagrant-spk dev`.  This is
-# the ideal place to invoke anything which is normally part of your app's build
-# process - transforming the code in your repository into the collection of files
-# which can actually run the service in production
-#
-# Some examples:
-#
-#   * For a C/C++ application, calling
-#       ./configure && make && make install
-#   * For a Python application, creating a virtualenv and installing
-#     app-specific package dependencies:
-#       virtualenv /opt/app/env
-#       /opt/app/env/bin/pip install -r /opt/app/requirements.txt
-#   * Building static assets from .less or .sass, or bundle and minify JS
-#   * Collecting various build artifacts or assets into a deployment-ready
-#     directory structure
-
-# By default, this script does nothing.  You'll have to modify it as
-# appropriate for your application.
-cd /opt/app
-exit 0
-"""
-
-DIY_LAUNCHER_SCRIPT = r"""#!/bin/bash
-# This script is run every time an instance of our app - aka grain - starts up.
-# This is the entry point for your application both when a grain is first launched
-# and when a grain resumes after being previously shut down.
-#
-# This script is responsible for launching everything your app needs to run.  The
-# thing it should do *last* is:
-#
-#   * Start a process in the foreground listening on port 8000 for HTTP requests.
-#
-# This is how you indicate to the platform that your application is up and
-# ready to receive requests.  Often, this will be something like nginx serving
-# static files and reverse proxying for some other dynamic backend service.
-#
-# Other things you probably want to do in this script include:
-#
-#   * Building folder structures in /var.  /var is the only non-tmpfs folder
-#     mounted read-write in the sandbox, and when a grain is first launched, it
-#     will start out empty.  It will persist between runs of the same grain, but
-#     be unique per app instance.  That is, two instances of the same app have
-#     separate instances of /var.
-#   * Preparing a database and running migrations.  As your package changes
-#     over time and you release updates, you will need to deal with migrating
-#     data from previous schema versions to new ones, since users should not have
-#     to think about such things.
-#   * Launching other daemons your app needs (e.g. mysqld, redis-server, etc.)
-
-# By default, this script does nothing.  You'll have to modify it as
-# appropriate for your application.
-cd /opt/app
-exit 0
-"""
-
-# TODO: add more stack-specific plugins
-STACK_PLUGINS = {
-    "lemp": {
-        "setup": LEMP_SETUP_SCRIPT,
-        "build": LEMP_BUILD_SCRIPT,
-        "launcher": LEMP_LAUNCHER_SCRIPT,
-    },
-    "uwsgi": {
-        "setup": NGINX_UWSGI_SETUP_SCRIPT,
-        "build": NGINX_UWSGI_BUILD_SCRIPT,
-        "launcher": NGINX_UWSGI_LAUNCHER_SCRIPT,
-    },
-    "meteor": {
-        "initargs": "-I /home/vagrant/bundle -I /opt/meteor-spk/meteor-spk.deps -A",
-        "setup": METEOR_SETUP_SCRIPT,
-        "build": METEOR_BUILD_SCRIPT,
-        "launcher": METEOR_LAUNCHER_SCRIPT,
-    },
-    "static": {
-        "setup": STATIC_NGINX_SETUP_SCRIPT,
-        "launcher": STATIC_NGINX_LAUNCHER_SCRIPT,
-    },
-    "diy": {
-        "setup": DIY_SETUP_SCRIPT,
-        "build": DIY_BUILD_SCRIPT,
-        "launcher": DIY_LAUNCHER_SCRIPT,
-    },
-}
 
 def check_dot_sandstorm():
     expected_path = os.path.join(PWD, ".sandstorm")
@@ -648,14 +195,30 @@ def ensure_host_sandstorm_folder_exists():
         with open(keyring_file, "wb") as f:
             pass
 
-def setup_vm(args):
-    expected_stack_plugin = args.command_specific_args[0]
-    if expected_stack_plugin not in STACK_PLUGINS:
-        raise Exception("No stack plugin for {}".format(expected_stack_plugin))
-    stack_plugin = STACK_PLUGINS[expected_stack_plugin]
-    if "setup" not in stack_plugin or "launcher" not in stack_plugin:
-        raise Exception("Stack plugins require both 'setup' and 'launcher' scripts.")
+class StackPlugin(object):
+    def __init__(self, plugin_name):
+        self._plugin_name = plugin_name
+        plugin_dir = os.path.join(CODE_DIR, "stacks", self._plugin_name)
+        if not os.path.exists(plugin_dir):
+            raise Exception("No stack plugin for {}".format(plugin_name))
+        if (not os.path.exists(os.path.join(plugin_dir, "setup.sh")) or
+            not os.path.exists(os.path.join(plugin_dir, "launcher.sh"))):
+            raise Exception("Stack plugins require both 'setup.sh' and 'launcher.sh' scripts.")
 
+    def plugin_file(self, filename):
+        return os.path.join(CODE_DIR, "stacks", self._plugin_name, filename)
+
+    def init_args(self):
+        args_file = os.path.join(CODE_DIR, "stacks", self._plugin_name, "initargs")
+        if os.path.exists(args_file):
+            with open(args_file) as f:
+                return f.read().strip()
+        else:
+            return ""
+
+def setup_vm(args):
+    stack_plugin_name = args.command_specific_args[0]
+    stack_plugin = StackPlugin(stack_plugin_name)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     print("Initializing .sandstorm directory in {}".format(sandstorm_dir))
     # Create .sandstorm directory
@@ -666,19 +229,26 @@ def setup_vm(args):
     ensure_host_sandstorm_folder_exists()
 
     # Copy global setup script to e.g. install and configure sandstorm
-    with open(os.path.join(sandstorm_dir, "global-setup.sh"), "wb") as f:
+    global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
+    with open(global_setup_script_path, "wb") as f:
         f.write(GLOBAL_SETUP_SCRIPT)
+    os.chmod(global_setup_script_path, 0o755)
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
-    with open(os.path.join(sandstorm_dir, "setup.sh"), "wb") as f:
-        f.write(stack_plugin["setup"])
+    setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
+    with open(setup_script_path, "wb") as f:
+        with open(stack_plugin.plugin_file("setup.sh"), "rb") as g:
+            f.write(g.read())
+    os.chmod(setup_script_path, 0o755)
 
     # Copy build script, if present, to sandstorm root.  If none is provided by
     # this stack, add an empty one so that users can customize it if needed.
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
     with open(build_script_path, "wb") as f:
-        if 'build' in stack_plugin:
-            f.write(stack_plugin["build"])
+        source_script_path = stack_plugin.plugin_file("build.sh")
+        if os.path.exists(source_script_path):
+            with open(source_script_path, "rb") as g:
+                f.write(g.read())
         else:
             f.write(EMPTY_BUILD_SCRIPT)
     os.chmod(build_script_path, 0o755)
@@ -686,7 +256,8 @@ def setup_vm(args):
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "wb") as f:
-        f.write(stack_plugin["launcher"])
+        with open(stack_plugin.plugin_file("launcher.sh")) as g:
+            f.write(g.read())
     os.chmod(launcher_script_path, 0o755)
 
     # Copy in Vagrantfile
@@ -697,7 +268,7 @@ def setup_vm(args):
     # Make a note of which stack was used
     stack_path = os.path.join(sandstorm_dir, "stack")
     with open(stack_path, "w") as f:
-        f.write(expected_stack_plugin + "\n")
+        f.write(stack_plugin_name + "\n")
 
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -713,12 +284,10 @@ def init(args):
     stack_path = os.path.join(sandstorm_dir, "stack")
     with open(stack_path) as f:
         stack = f.read().strip()
-    init_args = STACK_PLUGINS[stack].get("initargs", "")
+    stack_plugin = StackPlugin(stack)
+    init_args = stack_plugin.init_args()
     # Initialize the package with spk init
     call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /opt/app/.sandstorm/launcher.sh".format(init_args))
-    init_hook = STACK_PLUGINS[stack].get("inithook", None)
-    if init_hook:
-        call_vagrant_command(sandstorm_dir, "ssh", "-c", init_hook)
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
