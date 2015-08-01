@@ -36,9 +36,12 @@ innodb_log_file_size = 1048576
 innodb_autoextend_increment = 1
 EOF
 # patch nginx conf to not bother trying to setuid, since we're not root
+# also patch errors to go to stderr, and logs nowhere.
 sed --in-place='' \
         --expression 's/^user www-data/#user www-data/' \
         --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+        --expression 's/^\s*error_log.*/error_log stderr;/' \
+        --expression 's/^\s*access_log.*/access_log off;/' \
         /etc/nginx/nginx.conf
 service nginx stop
 service mysql stop

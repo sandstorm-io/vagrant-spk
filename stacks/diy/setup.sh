@@ -15,6 +15,8 @@ set -euo pipefail
 #    sed --in-place='' \
 #            --expression 's/^user www-data/#user www-data/' \
 #            --expression 's#^pid /run/nginx.pid#pid /var/run/nginx.pid#' \
+#            --expression 's/^\s*error_log.*/error_log stderr;/' \
+#            --expression 's/^\s*access_log.*/access_log off;/' \
 #            /etc/nginx/nginx.conf
 
 # By default, this script does nothing.  You'll have to modify it as
