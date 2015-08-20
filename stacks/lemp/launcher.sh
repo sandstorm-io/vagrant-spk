@@ -3,6 +3,7 @@
 # Create a bunch of folders under the clean /var that php, nginx, and mysql expect to exist
 mkdir -p /var/lib/mysql
 mkdir -p /var/lib/nginx
+mkdir -p /var/lib/php5/sessions
 mkdir -p /var/log
 mkdir -p /var/log/mysql
 mkdir -p /var/log/nginx
