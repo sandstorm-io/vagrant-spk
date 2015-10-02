@@ -11,6 +11,11 @@ server {
     listen 8000 default_server;
     listen [::]:8000 default_server ipv6only=on;
 
+    # Allow arbitrarily large bodies - Sandstorm can handle them, and requests
+    # are authenticated already, so there's no reason for apps to add additional
+    # limits by default.
+    client_max_body_size 0;
+
     server_name localhost;
     root /opt/app;
     location / {
