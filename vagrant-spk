@@ -327,8 +327,7 @@ def pack(args):
     print("package produced at {}".format(output_spk))
 
 def publish(args):
-    'Sadly, we have to copy the spk into the VM since it could be anywhere on the host filesystem'
-
+    # Sadly, we have to copy the spk into the VM since it could be anywhere on the host filesystem
     spk = args.command_specific_args[0]
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     spk_basename = os.path.basename(spk)
@@ -356,24 +355,52 @@ def ssh(args):
     call_vagrant_command(sandstorm_dir, "ssh")
 
 def main():
-    operations = {
-            'setupvm': setup_vm,
-            'up': bring_up_vm,
-            'init': init,
-            'dev': dev,
-            'pack': pack,
-            'publish': publish,
-            'halt': halt,
-            'destroy': destroy,
-            'global-status': global_status,
-            'ssh': ssh,
-    }
-    parser = argparse.ArgumentParser(prog=sys.argv[0])
-    parser.add_argument("command", choices=sorted(operations.keys()))
+    operations = (
+        ('setupvm', setup_vm,
+            "Set up a fresh app environment in \n"
+            "  --work-directory (using the provided `stack` \n"
+            "  command arg).  Also inits developer keys in \n"
+            "  ~/.sandstorm on this host."),
+        ('up', bring_up_vm,
+            "Start the Vagrant VM (and build the VM image \n"
+            "  if necessary)."),
+        ('init', init,
+            "Initialize fresh Sandstorm package definition \n"
+            "  resources in --work-directory."),
+        ('dev', dev,
+            "Make the current app available to Sandstorm \n"
+            "  in dev mode (after bringing the Vagrant VM `up`)"),
+        ('pack', pack,
+            "Pack the curent app into a \n"
+            "  Sandstorm package."),
+        ('publish', publish,
+            "Send the current packed app spk to \n"
+            "  the Sandstorm App Market."),
+        ('halt', halt,
+            "Shut down the Vagrant VM."),
+        ('destroy', destroy,
+            "Delete the Vagrant VM (but leave \n"
+            "  --work-directory untouched)."),
+        ('global-status', global_status,
+            "Show the state of all active \n"
+            "  Vagrant VMs on this host."),
+        ('ssh', ssh,
+            "SSH into the Vagrant VM."),
+    )
+    op_to_func = dict((cmd, f) for cmd, f, helptext in operations)
+    ops_helptext = '\n'.join(cmd + ': ' + helptext for cmd, f, helptext in operations)
+    parser = argparse.ArgumentParser(prog=sys.argv[0], formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("command", choices=[cmd for cmd, _, _ in operations], help=ops_helptext)
     parser.add_argument("command_specific_args", nargs="*")
-    parser.add_argument("--work-directory", action='store', default=PWD)
+    parser.add_argument(
+        "--work-directory",
+        action='store',
+        default=PWD,
+        help="Use this working directory (e.g. for .sandstorm/ \n"
+             "and other configuration).  [Default: current \n"
+             "working directory]")
     args = parser.parse_args(sys.argv[1:])
-    operation = operations[args.command]
+    operation = op_to_func[args.command]
     operation(args)
 
 if __name__ == "__main__":
