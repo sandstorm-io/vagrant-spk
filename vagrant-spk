@@ -61,9 +61,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Use a shell script to "provision" the box. This installs Sandstorm using
   # the bundled installer.
-  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/global-setup.sh"
+  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/global-setup.sh", keep_color: true
   # Then, do stack-specific and app-specific setup.
-  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/setup.sh"
+  config.vm.provision "shell", inline: "sudo bash /opt/app/.sandstorm/setup.sh", keep_color: true
 
   # Shared folders are configured per-provider since vboxsf can't handle >4096 open files,
   # NFS requires privilege escalation every time you bring a VM up,
@@ -125,21 +125,29 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     override.vm.synced_folder ENV["HOME"] + "/.sandstorm", "/host-dot-sandstorm", type: "9p", accessmode: "passthrough"
     override.vm.synced_folder "..", "/vagrant", type: "9p", accessmode: "passthrough"
   end
+
+  # Run ssh with `-t` to avoid the confusing `stdin: is not a tty`
+  # printout.
+  config.ssh.pty = true
 end
 """
 
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
+
+CURL_OPTS="--silent --show-error"
 echo localhost > /etc/hostname
 hostname localhost
-curl https://install.sandstorm.io/ > /host-dot-sandstorm/caches/install.sh
-SANDSTORM_CURRENT_VERSION=$(curl -fs "https://install.sandstorm.io/dev?from=0&type=install")
+curl $CURL_OPTS https://install.sandstorm.io/ > /host-dot-sandstorm/caches/install.sh
+SANDSTORM_CURRENT_VERSION=$(curl $CURL_OPTS -f "https://install.sandstorm.io/dev?from=0&type=install")
 SANDSTORM_PACKAGE="sandstorm-$SANDSTORM_CURRENT_VERSION.tar.xz"
 if [[ ! -f /host-dot-sandstorm/caches/$SANDSTORM_PACKAGE ]] ; then
-    curl --output "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "https://dl.sandstorm.io/$SANDSTORM_PACKAGE"
+    curl $CURL_OPTS --output "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "https://dl.sandstorm.io/$SANDSTORM_PACKAGE"
     mv "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE"
 fi
-bash /host-dot-sandstorm/caches/install.sh -d -e "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE"
+if [ ! -e /opt/sandstorm/latest/sandstorm ] ; then
+    bash /host-dot-sandstorm/caches/install.sh -d -e "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE" >/dev/null
+fi
 modprobe ip_tables
 # Make the vagrant user part of the sandstorm group so that commands like
 # `spk dev` work.
@@ -151,7 +159,7 @@ sudo sed --in-place='' \
 # TODO: update sandstorm installer script to ask about dev accounts, and
 # specify a value for this option in the default config?
 if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm.conf ; then
-    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
+    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf >/dev/null
     sudo service sandstorm restart
 fi
 # Enable apt-cacher-ng proxy to make things faster if one appears to be running on the gateway IP

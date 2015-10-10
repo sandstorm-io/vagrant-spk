@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+CURL_OPTS="--silent --show-error"
+
 cd /opt/
 
 PACKAGE=meteor-spk-0.1.7
@@ -9,14 +11,14 @@ CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
 
 # Fetch meteor-spk tarball if not cached
 if [ ! -f "$CACHE_TARGET" ] ; then
-    curl https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
+    curl $CURL_OPTS https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
 fi
 
 # Extract to /opt
 tar xf "$CACHE_TARGET"
 
 # Create symlink so we can rely on the path /opt/meteor-spk
-ln -s "${PACKAGE}" meteor-spk
+if [ ! -e meteor-spk ] ; then ln -s "${PACKAGE}" meteor-spk ; fi
 
 # Add bash, and its dependencies, so they get mapped into the image.
 # Bash runs the launcher script.
@@ -35,7 +37,7 @@ METEOR_CACHE_TARGET="/host-dot-sandstorm/caches/${METEOR_TARBALL_FILENAME}"
 
 # Fetch meteor tarball if not cached
 if [ ! -f "$METEOR_CACHE_TARGET" ] ; then
-    curl "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
+    curl $CURL_OPTS "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
     mv "${METEOR_CACHE_TARGET}"{.partial,}
 fi
 
@@ -43,5 +45,4 @@ fi
 cd /home/vagrant/
 su -c "tar xf '${METEOR_CACHE_TARGET}'" vagrant
 # Link into global PATH
-ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor
-
+if [ ! -e /usr/bin/meteor ] ; then ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor ; fi
