@@ -18,7 +18,7 @@ fi
 tar xf "$CACHE_TARGET"
 
 # Create symlink so we can rely on the path /opt/meteor-spk
-ln -s "${PACKAGE}" meteor-spk
+if [ ! -e meteor-spk ] ; then ln -s "${PACKAGE}" meteor-spk ; fi
 
 # Add bash, and its dependencies, so they get mapped into the image.
 # Bash runs the launcher script.
@@ -45,5 +45,4 @@ fi
 cd /home/vagrant/
 su -c "tar xf '${METEOR_CACHE_TARGET}'" vagrant
 # Link into global PATH
-ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor
-
+if [ ! -e /usr/bin/meteor ] ; then ln -s /home/vagrant/.meteor/meteor /usr/bin/meteor ; fi
