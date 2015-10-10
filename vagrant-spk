@@ -146,7 +146,7 @@ if [[ ! -f /host-dot-sandstorm/caches/$SANDSTORM_PACKAGE ]] ; then
     mv "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE"
 fi
 if [ ! -e /opt/sandstorm/latest/sandstorm ] ; then
-    bash /host-dot-sandstorm/caches/install.sh -d -e "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE"
+    bash /host-dot-sandstorm/caches/install.sh -d -e "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE" >/dev/null
 fi
 modprobe ip_tables
 # Make the vagrant user part of the sandstorm group so that commands like
