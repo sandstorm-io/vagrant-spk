@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+CURL_OPTS="--silent --show-error"
+
 cd /opt/
 
 PACKAGE=meteor-spk-0.1.7
@@ -9,7 +11,7 @@ CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
 
 # Fetch meteor-spk tarball if not cached
 if [ ! -f "$CACHE_TARGET" ] ; then
-    curl https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
+    curl $CURL_OPTS https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
 fi
 
 # Extract to /opt
@@ -35,7 +37,7 @@ METEOR_CACHE_TARGET="/host-dot-sandstorm/caches/${METEOR_TARBALL_FILENAME}"
 
 # Fetch meteor tarball if not cached
 if [ ! -f "$METEOR_CACHE_TARGET" ] ; then
-    curl "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
+    curl $CURL_OPTS "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
     mv "${METEOR_CACHE_TARGET}"{.partial,}
 fi
 
