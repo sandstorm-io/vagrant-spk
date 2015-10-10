@@ -159,7 +159,7 @@ sudo sed --in-place='' \
 # TODO: update sandstorm installer script to ask about dev accounts, and
 # specify a value for this option in the default config?
 if ! grep --quiet --no-messages ALLOW_DEV_ACCOUNTS=true /opt/sandstorm/sandstorm.conf ; then
-    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf
+    echo "ALLOW_DEV_ACCOUNTS=true" | sudo tee -a /opt/sandstorm/sandstorm.conf >/dev/null
     sudo service sandstorm restart
 fi
 # Enable apt-cacher-ng proxy to make things faster if one appears to be running on the gateway IP
