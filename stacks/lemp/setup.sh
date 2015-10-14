@@ -49,6 +49,11 @@ sed --in-place='' \
 sed --in-place='' \
         --expression='s/^pid =/#pid =/' \
         /etc/php5/fpm/php-fpm.conf
+# patch /etc/php5/fpm/pool.d/www.conf to no clear environment variables
+# so we can pass in SANDSTORM=1 to apps
+sed --in-place='' \
+        --expression='s/^;clear_env = no/clear_env=no/' \
+        /etc/php5/fpm/pool.d/www.conf
 # patch mysql conf to not change uid
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
