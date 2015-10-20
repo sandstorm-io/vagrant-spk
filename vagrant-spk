@@ -29,6 +29,7 @@ import subprocess
 import sys
 
 PWD = os.getcwd()
+ENABLE_EXPERIMENTAL = False
 CODE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
 VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
 # vi: set ft=ruby :
@@ -229,6 +230,56 @@ class StackPlugin(object):
         else:
             return ""
 
+def auto(args):
+    # Automatic packaging. This assumes:
+    #
+    # - There is no .sandstorm/ yet, and
+    #
+    # - The app uses git, and
+    #
+    # - It is OK to create a package with a key (package ID) that will
+    #   get lost, and
+    #
+    # - The user knows how to install the result on a Sandstorm
+    #   install.
+
+    # Ensure git
+    assert os.path.exists('.git/')
+
+    # setupvm
+    print('$', 'vagrant-spk setup', ' '.join(args.command_specific_args))
+    setup_vm(args)
+
+    # Remove any command-specific args for now.
+    args.command_specific_args = []
+
+    # up
+    print('$', 'vagrant-spk up')
+    bring_up_vm(args)
+
+    # init. This stores a fresh private key.
+    print('$', 'vagrant-spk init')
+    init(args)
+
+    # Run build, but skip spk dev. TODO make less hacky.
+    # Skip dev mode, since this is non-interactive for now.
+    print('$', 'vagrant-spk dev')
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "/opt/app/.sandstorm/build.sh",
+    ]))
+
+    print("*** Click around and make sure the app works OK ***")
+
+    # TODO: Replace 'Example app' with 'Fantastic app'.
+
+    # Package it.
+    args.command_specific_args = ['../app.spk']
+    print('$', 'vagrant-spk pack', ' '.join(args.command_specific_args))
+    pack(args)
+
+    # Success.
+
 def setup_vm(args):
     stack_plugin_name = args.command_specific_args[0]
     stack_plugin = StackPlugin(stack_plugin_name)
@@ -354,7 +405,12 @@ def ssh(args):
     call_vagrant_command(sandstorm_dir, "ssh")
 
 def main():
-    operations = (
+    global ENABLE_EXPERIMENTAL
+    # Switch on feature(s) that we don't think are ready for everyone.
+    if os.environ.get("VAGRANT_SPK_EXPERIMENTAL", "").upper() == "Y":
+        ENABLE_EXPERIMENTAL = True
+
+    operations = [
         ('setupvm', setup_vm,
             "Set up a fresh app environment in \n"
             "  --work-directory (using the provided `stack` \n"
@@ -385,7 +441,16 @@ def main():
             "  Vagrant VMs on this host."),
         ('ssh', ssh,
             "SSH into the Vagrant VM."),
-    )
+    ]
+
+    if ENABLE_EXPERIMENTAL:
+        operations.append(
+            ('auto', auto,
+             "Automatically package the app in \n"
+             "  --work-directory (using the provided `stack` \n"
+             "  command arg. Also inits developer keys in \n"
+             "  ~/.sandstorm on this host. (EXPERIMENTAL)"))
+
     op_to_func = dict((cmd, f) for cmd, f, helptext in operations)
     ops_helptext = '\n'.join(cmd + ': ' + helptext for cmd, f, helptext in operations)
     parser = argparse.ArgumentParser(prog=sys.argv[0], formatter_class=argparse.RawTextHelpFormatter)
