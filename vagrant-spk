@@ -244,7 +244,8 @@ def auto(args):
     #   install.
 
     # Ensure git
-    assert os.path.exists('.git/')
+    if not os.path.exists('.git'):
+        print("WARNING", "No .git directory found. Proceeding anyway.")
 
     # setupvm
     print('$', 'vagrant-spk setup', ' '.join(args.command_specific_args))
