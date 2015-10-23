@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import argparse
 import os
+import glob
 import shutil
 import subprocess
 import sys
@@ -243,9 +244,17 @@ def auto(args):
     # - The user knows how to install the result on a Sandstorm
     #   install.
 
-    # Ensure git
-    if not os.path.exists('.git'):
-        print("WARNING", "No .git directory found. Proceeding anyway.")
+    # Ensure this directory has a .meteor/. If not, bail out early and ask
+    # the user to "cd" into a directory that does.
+    if args.command_specific_args[0] == 'meteor':
+        if not os.path.exists('.meteor'):
+            print("ERROR", "Automatic packaging cannot proceed since you are not in a meteor project.")
+            print("You will have to `cd` into another directory before running this too.")
+            glob_matches = glob.glob('*/.meteor')
+            if glob_matches:
+                print('')
+                print('Try running: cd', glob_matches[0][:-len('.meteor')])
+            sys.exit(1)
 
     # setupvm
     print('$', 'vagrant-spk setup', ' '.join(args.command_specific_args))
@@ -278,8 +287,16 @@ def auto(args):
     args.command_specific_args = ['../app.spk']
     print('$', 'vagrant-spk pack', ' '.join(args.command_specific_args))
     pack(args)
+    args.command_specific_args = []
 
-    # Success.
+    # Success. Bring down the VM for now, since otherwise port 6080
+    # will be in use.
+    print('')
+    print('You can run:')
+    print('$ vagrant-spk halt')
+    print('')
+    print('When you are ready to stop thinking about packaging this app.')
+
 
 def setup_vm(args):
     stack_plugin_name = args.command_specific_args[0]
