@@ -271,6 +271,35 @@ def auto(args):
     print('$', 'vagrant-spk init')
     init(args)
 
+    # Modify the .sandstorm/sandstorm-pkgdef.capnp to contain
+    # the git repo name in some way, if there is a git repo here.
+    git_repo = None
+    git_remote_executor = subprocess.Popen(['git', 'remote', '-v'], stdout=subprocess.PIPE)
+    exit_code = git_remote_executor.wait()
+    if exit_code == 0:
+        stdout = git_remote_executor.communicate()[0]
+        git_repo = stdout.split('\n')[0].split()[1]
+
+    if git_repo is not None:
+        with open('.sandstorm/sandstorm-pkgdef.capnp') as fd:
+            orig_capnp = fd.read()
+
+        # Fix codeUrl =
+        assert 'codeUrl = "http://example.com",' in orig_capnp
+        improved_capnp = orig_capnp.replace(
+            'codeUrl = "http://example.com",',
+            'codeUrl = "{0}",'.format(git_repo))
+
+        # Fix appTitle =
+        nicertitle = git_repo.split('/')[-1]
+        assert '(defaultText = "Example App")' in orig_capnp
+        improved_capnp = improved_capnp.replace(
+            '(defaultText = "Example App")',
+            '(defaultText = "{0}")'.format(nicertitle))
+
+        with open('.sandstorm/sandstorm-pkgdef.capnp', 'w') as fd:
+            fd.write(improved_capnp)
+
     # Run build, but skip spk dev. TODO make less hacky.
     # Skip dev mode, since this is non-interactive for now.
     print('$', 'vagrant-spk dev')
