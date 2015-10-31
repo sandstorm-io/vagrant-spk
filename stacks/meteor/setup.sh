@@ -5,7 +5,7 @@ CURL_OPTS="--silent --show-error"
 
 cd /opt/
 
-PACKAGE=meteor-spk-0.1.7
+PACKAGE=meteor-spk-0.1.8
 PACKAGE_FILENAME="$PACKAGE.tar.xz"
 CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
 
