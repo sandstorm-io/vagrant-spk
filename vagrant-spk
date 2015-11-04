@@ -246,7 +246,12 @@ def auto(args):
 
     # Ensure this directory has a .meteor/. If not, bail out early and ask
     # the user to "cd" into a directory that does.
+    stack = None
+    STACK_TYPE_METEOR = 'meteor'
     if args.command_specific_args[0] == 'meteor':
+        stack = STACK_TYPE_METEOR
+
+    if stack == STACK_TYPE_METEOR:
         if not os.path.exists('.meteor'):
             print("ERROR", "Automatic packaging cannot proceed since you are not in a meteor project.")
             print("You will have to `cd` into another directory before running this too.")
@@ -270,6 +275,21 @@ def auto(args):
     # init. This stores a fresh private key.
     print('$', 'vagrant-spk init')
     init(args)
+
+    # If this is a Meteor app, modify the app:
+    #
+    # - Add the Sandstorm accounts package, for auto-sign-in.
+    #
+    # - Maybe in the future, fix HTTP/HTTPS mixed content stuff on
+    #   common CDN domains. Note that the real fix for this is to
+    #   embed a copy of the assets in the app package, but this works
+    #   for now.
+    if stack == STACK_TYPE_METEOR:
+        ACCOUNTS_PKG = 'kenton:accounts-sandstorm'
+        if ACCOUNTS_PKG not in open('.meteor/packages').read():
+            with open('.meteor/packages', 'w') as fd:
+                fd.write(ACCOUNTS_PKG)
+                fd.write('\n')
 
     # Modify the .sandstorm/sandstorm-pkgdef.capnp to contain
     # the git repo name in some way, if there is a git repo here.
