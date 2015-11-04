@@ -25,6 +25,7 @@ from __future__ import print_function
 import argparse
 import os
 import glob
+import re
 import shutil
 import subprocess
 import sys
@@ -231,6 +232,29 @@ class StackPlugin(object):
         else:
             return ""
 
+def switch_to_https_cdn_resources(input_file_contents):
+    # Let's change HTML with regular expressions. I realize that is a
+    # dangerous thing to do, but I like to live dangerously (and
+    # moreover we're changing Meteor templates so it's not like I can
+    # "just" parse with a HTML parser and then serialize).
+    changed = False
+    input_output_pairs = (
+        ('http://fonts.googleapis.com', 'https://fonts.googleapis.com'),
+    )
+    meta_regexes = [
+        '''(href=")(%s)''',
+        '''(href=')(%s)''',
+    ]
+    output = input_file_contents
+
+    for (bad, good) in input_output_pairs:
+        for regex in meta_regexes:
+            replacer_function = lambda matches: (matches.group(1) + good)
+            output = re.sub(regex % (bad,), replacer_function, output)
+
+    return output
+
+
 def auto(args):
     # Automatic packaging. This assumes:
     #
@@ -261,21 +285,6 @@ def auto(args):
                 print('Try running: cd', glob_matches[0][:-len('.meteor')])
             sys.exit(1)
 
-    # setupvm
-    print('$', 'vagrant-spk setup', ' '.join(args.command_specific_args))
-    setup_vm(args)
-
-    # Remove any command-specific args for now.
-    args.command_specific_args = []
-
-    # up
-    print('$', 'vagrant-spk up')
-    bring_up_vm(args)
-
-    # init. This stores a fresh private key.
-    print('$', 'vagrant-spk init')
-    init(args)
-
     # If this is a Meteor app, modify the app:
     #
     # - Add the Sandstorm accounts package, for auto-sign-in.
@@ -291,6 +300,41 @@ def auto(args):
                 fd.write('\n')
                 fd.write(ACCOUNTS_PKG)
                 fd.write('\n')
+
+        # We can use `git`, so let's use it to loop over the files
+        # in the repo and search for well-known HTTP resource links,
+        # replacing them with HTTPS resource links.
+        git_ls_files_executor = subprocess.Popen(['git', 'ls-files', '--', '*.html'],
+                                                 stdout=subprocess.PIPE)
+        exit_code = git_ls_files_executor.wait()
+        assert exit_code == 0
+        stdout = git_ls_files_executor.communicate()[0]
+        for filename in stdout.split('\n'):
+            filename = filename.strip()
+            if not filename:
+                continue
+            with open(filename, 'r') as fd:
+                original_text = fd.read()
+            https_ified = switch_to_https_cdn_resources(original_text)
+            if https_ified != original_text:
+                print('** Converting', filename, 'to HTTPS resources.')
+                with open(filename, 'w') as fd:
+                    fd.write(https_ified)
+
+    # setupvm
+    print('$', 'vagrant-spk setup', ' '.join(args.command_specific_args))
+    setup_vm(args)
+
+    # Remove any command-specific args for now.
+    args.command_specific_args = []
+
+    # up
+    print('$', 'vagrant-spk up')
+    bring_up_vm(args)
+
+    # init. This stores a fresh private key.
+    print('$', 'vagrant-spk init')
+    init(args)
 
     # Modify the .sandstorm/sandstorm-pkgdef.capnp to contain
     # the git repo name in some way, if there is a git repo here.
