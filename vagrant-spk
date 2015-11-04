@@ -287,7 +287,7 @@ def auto(args):
     if stack == STACK_TYPE_METEOR:
         ACCOUNTS_PKG = 'kenton:accounts-sandstorm'
         if ACCOUNTS_PKG not in open('.meteor/packages').read():
-            with open('.meteor/packages', 'w') as fd:
+            with open('.meteor/packages', 'a') as fd:
                 fd.write('\n')
                 fd.write(ACCOUNTS_PKG)
                 fd.write('\n')
