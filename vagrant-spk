@@ -288,6 +288,7 @@ def auto(args):
         ACCOUNTS_PKG = 'kenton:accounts-sandstorm'
         if ACCOUNTS_PKG not in open('.meteor/packages').read():
             with open('.meteor/packages', 'w') as fd:
+                fd.write('\n')
                 fd.write(ACCOUNTS_PKG)
                 fd.write('\n')
 
