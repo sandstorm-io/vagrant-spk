@@ -1,3 +1,16 @@
+### v0.130 (2015-11-04)
+- (EXPERIMENTAL) vagrant-spk auto meteor improvements:
+    - Automatically switch (some) HTTP resource references to HTTPS.
+    - Add kentonv:accounts-sandstorm to generated packages.
+    - Use git repo name to infer package name.
+    - Store git repo URL in the package metadata.
+- Meteor stack: Use `meteor-spk` version 0.1.8. This fixes a bug where
+  niscudb => Mongo 3 migrations would sometimes fail. If your app has
+  `PACKAGE=meteor-spk-0.1.7` in `.sandstorm/setup.sh`, **and** if it
+  ever had a previous version, then you should migrate to
+  `PACKAGE=meteor-spk-0.1.8` and do `vagrant-spk destroy` to flush the
+  cached meteor-spk package version in any packaging VMs.
+
 ### v0.125 (2015-10-22)
 - Provide a SANDSTORM=1 environment variable so apps can decide if they are
   running in Sandstorm, through a check at runtime.
