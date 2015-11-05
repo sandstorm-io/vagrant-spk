@@ -11,7 +11,10 @@ CACHE_TARGET="/host-dot-sandstorm/caches/${PACKAGE_FILENAME}"
 
 # Fetch meteor-spk tarball if not cached
 if [ ! -f "$CACHE_TARGET" ] ; then
-    curl $CURL_OPTS https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET"
+    echo -n "Downloading ${PACKAGE}..."
+    curl $CURL_OPTS https://dl.sandstorm.io/${PACKAGE_FILENAME} > "$CACHE_TARGET.partial"
+    mv "${CACHE_TARGET}.partial" "${CACHE_TARGET}"
+    echo "...done."
 fi
 
 # Extract to /opt
@@ -37,8 +40,10 @@ METEOR_CACHE_TARGET="/host-dot-sandstorm/caches/${METEOR_TARBALL_FILENAME}"
 
 # Fetch meteor tarball if not cached
 if [ ! -f "$METEOR_CACHE_TARGET" ] ; then
+    echo -n "Downloading Meteor version ${METEOR_RELEASE}..."
     curl $CURL_OPTS "$METEOR_TARBALL_URL" > "${METEOR_CACHE_TARGET}.partial"
     mv "${METEOR_CACHE_TARGET}"{.partial,}
+    echo "...done."
 fi
 
 # Extract as unprivileged user, which is the usual meteor setup
