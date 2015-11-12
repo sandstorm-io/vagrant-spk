@@ -487,10 +487,23 @@ def pack(args):
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm/",
         "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk",
+        "spk verify --details /home/vagrant/sandstorm-package.spk",
         "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
     ]))
     os.rename("sandstorm-package.spk", output_spk)
     print("package produced at {}".format(output_spk))
+
+def verify(args):
+    spk = args.command_specific_args[0]
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    spk_basename = os.path.basename(spk)
+    temp_spk = os.path.join(sandstorm_dir, spk_basename)
+
+    try:
+        shutil.copyfile(spk, temp_spk)
+        call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk verify --details /opt/app/.sandstorm/{}".format(spk_basename))
+    finally:
+        os.remove(temp_spk)
 
 def publish(args):
     # Sadly, we have to copy the spk into the VM since it could be anywhere on the host filesystem
@@ -544,6 +557,8 @@ def main():
         ('pack', pack,
             "Pack the curent app into a \n"
             "  Sandstorm package."),
+        ('verify', verify,
+            "Show details of the specified Sandstorm package."),
         ('publish', publish,
             "Send the current packed app spk to \n"
             "  the Sandstorm App Market."),
