@@ -45,8 +45,8 @@ VM_NAME = File.basename(File.dirname(File.dirname(__FILE__))) + "_sandstorm_#{Ti
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  # We base ourselves off Debian Jessie
-  config.vm.box = "debian/jessie64"
+  # Base on the Sandstorm snapshots of the official Debian 8 (jessie) box.
+  config.vm.box = "sandstorm/debian-jessie64"
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
     # vagrant-vbguest is a Vagrant plugin that upgrades
