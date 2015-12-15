@@ -206,7 +206,7 @@ def ensure_working_vboxsf_in_base_box(sandstorm_dir):
     def test_vagrantfile_pins_version():
         with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
             for line in fd:
-                if line.strip().startswith('config.vm.box_version '):
+                if line.strip().startswith('config.vm.box_version'):
                     return True
         return False
     vagrantfile_pins_version = test_vagrantfile_pins_version()
