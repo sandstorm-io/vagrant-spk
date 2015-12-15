@@ -191,6 +191,72 @@ def call_vagrant_command(sandstorm_dir, *command_args):
     print("Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
     return subprocess.check_call(command, cwd=sandstorm_dir)
 
+def ensure_working_vboxsf_in_base_box(sandstorm_dir):
+    # If the .sandstorm/Vagrantfile refers to debian/jessie64, and does not pin it to a particular
+    # version, and the user has version 8.2.2 available on their system, then we abort the
+    # "vagrant-spk up" process because it will not work.
+    def test_vagrantfile_refers_to_jessie64():
+        with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
+            for line in fd:
+                if line.strip().split() == 'config.vm.box = "debian/jessie64"'.split():
+                    return True
+        return False
+    vagrantfile_refers_to_jessie64 = test_vagrantfile_refers_to_jessie64()
+
+    def test_vagrantfile_pins_version():
+        with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
+            for line in fd:
+                if line.strip().startswith('config.vm.box_version '):
+                    return True
+        return False
+    vagrantfile_pins_version = test_vagrantfile_pins_version()
+
+    def get_vagrant_dot_d_path():
+        if os.environ.get('VAGRANT_HOME'):
+            return os.environ.get('VAGRANT_HOME')
+        homedir = (os.environ.get('USERPROFILE') or os.environ.get('HOME'))
+        return os.path.join(homedir, '.vagrant.d')
+    user_has_version_822 = (os.path.exists(
+        os.path.join(get_vagrant_dot_d_path(), 'boxes/debian-VAGRANTSLASH-jessie64/8.2.2')))
+
+    if (vagrantfile_refers_to_jessie64 and
+            (not vagrantfile_pins_version) and
+            user_has_version_822):
+        msg = (
+            """*** INCOMPATIBLE OPTIONS DETECTED ***
+
+You need to adjust .sandstorm/Vagrantfile due to recent incompatible changes
+made by a project we depend on. Apologies for this mess.
+
+Here's how to fix it:
+
+Open .sandstorm/Vagrantfile and find this line:
+
+  config.vm.box = "debian/jessie64"
+
+Change it to:
+
+  config.vm.box = "sandstorm/debian-jessie64"
+
+For details (including how to bypass this warning) read:
+https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.136
+
+Once you have done that, please re-run this command ("vagrant-spk up").""")
+        should_bail = True
+
+        # If the VAGRANT_SPK_IGNORE_WARNINGS environment variable contains "jessie64", then
+        # proceed anyway.
+        if ('jessie64' in os.environ.get('VAGRANT_SPK_IGNORE_WARNINGS', '').split()):
+            msg = '''*** INCOMPATIBLE OPTIONS DETECTED ***
+    See https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.136
+    Proceeding anyway due to VAGRANT_SPK_IGNORE_WARNINGS=jessie64...
+'''
+            should_bail = False
+
+        print(msg)
+        if should_bail:
+            sys.exit(1)
+
 def ensure_host_sandstorm_folder_exists():
     # We wrap the keyring in an additional folder, because Vagrant shared
     # folders can't share single files, only folders, and I don't want to give
@@ -451,6 +517,9 @@ def bring_up_vm(args):
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
     # ~/.sandstorm/caches to cache the installers
     ensure_host_sandstorm_folder_exists()
+    # Sanity-check that the user will get a Vagrant box that supports vboxsf, since
+    # vagrant-spk depends on that for now.
+    ensure_working_vboxsf_in_base_box(sandstorm_dir)
     # Bring up VM
     call_vagrant_command(sandstorm_dir, "up")
 
