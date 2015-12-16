@@ -12,6 +12,11 @@ function assert_github_token_and_release_tool_present() {
 }
 
 function assert_git_state_is_clean() {
+  if [[ "${SKIP_GIT_CLEAN_CHECK:-no}" == "yes" ]]; then
+    echo "Skipping git clean check due to SKIP_GIT_CLEAN_CHECK=yes in environment."
+    return
+  fi
+
   if [ "x$(git status --porcelain)" != "x" ]; then
     echo "Please commit changes to git before releasing." >&2
     exit 1
@@ -94,9 +99,9 @@ function tag_and_push() {
     git tag "$TAG_NAME" "$GIT_REVISION" -m "Release vagrant-spk ${DISPLAY_VERSION}"
   fi
 
-  echo "**** Pushing build $BUILD ****"
+  echo "**** Pushing build $TAG_NAME ****"
   if [[ "$DRY_RUN" == "yes" ]]; then
-    echo "Not pushing $BUILD yet. Re-run with DRY_RUN=no in the environment."
+    echo "Not pushing $TAG_NAME yet. Re-run with DRY_RUN=no in the environment."
     echo ""
   else
     git push origin "$TAG_NAME"
@@ -104,7 +109,7 @@ function tag_and_push() {
 }
 
 function create_github_release() {
-  echo "**** Creating GitHub release for $BUILD ****"
+  echo "**** Creating GitHub release for $TAG_NAME ****"
 
   if [[ "$DRY_RUN" == "yes" ]] ; then
     echo "Not creating GitHub release yet. Re-run with DRY_RUN=no in the environment."
