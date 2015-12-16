@@ -1,3 +1,26 @@
+### v0.137 (2015-12-16)
+- BREAKING CHANGE: Sandstorm packagers must change `.sandstorm/Vagrantfile`.
+    - Problem: The official Debian "jessie64" Vagrant base box stopped supporting
+      VirtualBox file sharing. This new release means that anyone who either
+      runs `vagrant box update` or runs `vagrant-spk` on a fresh machine will
+      get a version of `debian/jessie64` that will not build Sandstorm packages
+      correctly.
+    - Solution: Sandstorm.io now maintains a separate Vagrant base box which
+      does support VirtualBox file sharing. For now, this is a bit-for-bit
+      copy of the most recent `debian/jessie64` base box that **did** support
+      file sharing.
+    - Change required: Edit `.sandstorm/Vagrantfile` to contain
+      `config.vm.box = "sandstorm/debian-jessie64"`.
+- Update `vagrant-spk up` to check for the above problem and inform people on
+  how to fix it. Update auto-generated `Vagrantfile` accordingly as well.
+- For freshly-created Meteor apps, be a little less quiet so that people can
+  understand how their package build is progressing.
+- (EXPERIMENTAL) Improvements to automatic Meteor app packaging, aka
+  `vagrant-spk auto meteor`:
+    - Automatically switch Google Fonts from HTTP to HTTPS.
+    - Open `.meteor/` files in append mode, to avoid overwriting them.
+    - Add more newlines when editing `.meteor/` files.
+
 ### v0.130 (2015-11-04)
 - (EXPERIMENTAL) vagrant-spk auto meteor improvements:
     - Automatically switch (some) HTTP resource references to HTTPS.
