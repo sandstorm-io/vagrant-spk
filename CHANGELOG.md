@@ -8,12 +8,14 @@
       made this change. This will result in sadness for `vagrant-spk` users: anyone who
       runs `vagrant-spk up` on a new system will get version 8.2.2 of the `debian/jessie64`
       base box, resulting in non-working VirtualBox file sharing, resulting in apps that
-      fail to build. You can also trigger the problem by running `vagrant box update`.
+      fail to build. If you've run `vagrant box update`, you may have also downloaded version
+      8.2.2 of `debian/jessie64`, triggering the problem.
     - Solution: Sandstorm.io now maintains a
       [separate Vagrant base box](https://atlas.hashicorp.com/sandstorm/boxes/debian-jessie64)
       (called `sandstorm/debian-jessie64`) which does support VirtualBox file sharing.
       For now, this is a bit-for-bit copy of the most recent `debian/jessie64` base box
-      that **did** support file sharing.
+      that **did** support file sharing. Since Sandstorm now controls the base box, it is
+      safe to run `vagrant box update` once you have changed to our base box.
 - Update `vagrant-spk up` to check for the above problem and inform people on
   how to fix it. Update auto-generated `Vagrantfile` accordingly as well.
 - For freshly-created Meteor apps, be a little less quiet so that people can
