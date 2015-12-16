@@ -1,8 +1,8 @@
 ### v0.137 (2015-12-16)
 - BREAKING CHANGE: Every Sandstorm app MUST change one line in `.sandstorm/Vagrantfile`.
-    - **Change required**: Every app must edit `.sandstorm/Vagrantfile` to contain
-      `config.vm.box = "sandstorm/debian-jessie64"` instead of
-      `config.vm.box = "debian/jessie64"`.
+    - **Change required**: Every app must edit `.sandstorm/Vagrantfile`. Find the line containing:
+        - `config.vm.box = "debian/jessie64"` and replace it with
+        - `config.vm.box = "sandstorm/debian-jessie64"`
     - Problem: The official Debian "jessie64" Vagrant base box stopped supporting
       VirtualBox file sharing. Specifically, version 8.2.2 of their base box made
       this change. This will result in sadness for `vagrant-spk` users: anyone who
