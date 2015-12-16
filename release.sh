@@ -3,9 +3,12 @@ set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-yes}"
 
-function assert_github_token_present() {
-  echo "**** Checking environment for configuration. ****"
+function assert_github_token_and_release_tool_present() {
+  echo "**** Checking environment for GitHub token. ****"
   export | grep -q GITHUB_TOKEN= || (echo "Aiee, you should set a GITHUB_TOKEN environment variable." ; exit 1)
+
+  echo "**** Checking path for GitHub release tool. ****"
+  which github-release >/dev/null || (echo "Aiee, you need a github-release tool in the PATH."; exit 1)
 }
 
 function assert_git_state_is_clean() {
@@ -106,7 +109,7 @@ function create_github_release() {
 }
 
 function main() {
-  assert_github_token_present
+  assert_github_token_and_release_tool_present
   assert_git_state_is_clean
   get_release_name
   assert_changelog_present
