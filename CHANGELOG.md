@@ -1,5 +1,5 @@
 ### v0.137 (2015-12-16)
-- BREAKING CHANGE: Sandstorm packagers must change `.sandstorm/Vagrantfile`.
+- BREAKING CHANGE: Every Sandstorm app MUST change one line in `.sandstorm/Vagrantfile`.
     - Problem: The official Debian "jessie64" Vagrant base box stopped supporting
       VirtualBox file sharing. This new release means that anyone who either
       runs `vagrant box update` or runs `vagrant-spk` on a fresh machine will
