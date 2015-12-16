@@ -1,3 +1,31 @@
+### v0.137 (2015-12-16)
+- BREAKING CHANGE: Every Sandstorm app MUST change one line in `.sandstorm/Vagrantfile`.
+    - **Change required**: Every app must edit `.sandstorm/Vagrantfile`. Find the line containing:
+        - `config.vm.box = "debian/jessie64"` and replace it with
+        - `config.vm.box = "sandstorm/debian-jessie64"`
+    - Problem: Debian's official Vagrant base box (aka `debian/jessie64`) has stopped
+      supporting VirtualBox file sharing. Specifically, version 8.2.2 of their base box
+      made this change. This will result in sadness for `vagrant-spk` users: anyone who
+      runs `vagrant-spk up` on a new system will get version 8.2.2 of the `debian/jessie64`
+      base box, resulting in non-working VirtualBox file sharing, resulting in apps that
+      fail to build. If you've run `vagrant box update`, you may have also downloaded version
+      8.2.2 of `debian/jessie64`, triggering the problem.
+    - Solution: Sandstorm.io now maintains a
+      [separate Vagrant base box](https://atlas.hashicorp.com/sandstorm/boxes/debian-jessie64)
+      (called `sandstorm/debian-jessie64`) which does support VirtualBox file sharing.
+      For now, this is a bit-for-bit copy of the most recent `debian/jessie64` base box
+      that **did** support file sharing. Since Sandstorm now controls the base box, it is
+      safe to run `vagrant box update` once you have changed to our base box.
+- Update `vagrant-spk up` to check for the above problem and inform people on
+  how to fix it. Update auto-generated `Vagrantfile` accordingly as well.
+- For freshly-created Meteor apps, be a little less quiet so that people can
+  understand how their package build is progressing.
+- (EXPERIMENTAL) Improvements to automatic Meteor app packaging, aka
+  `vagrant-spk auto meteor`:
+    - Automatically switch Google Fonts from HTTP to HTTPS.
+    - Open `.meteor/` files in append mode, to avoid overwriting them.
+    - Add more newlines when editing `.meteor/` files.
+
 ### v0.130 (2015-11-04)
 - (EXPERIMENTAL) vagrant-spk auto meteor improvements:
     - Automatically switch (some) HTTP resource references to HTTPS.
