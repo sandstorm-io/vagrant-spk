@@ -9,7 +9,7 @@
       does support VirtualBox file sharing. For now, this is a bit-for-bit
       copy of the most recent `debian/jessie64` base box that **did** support
       file sharing.
-    - **Change required**: Edit `.sandstorm/Vagrantfile` to contain
+    - **Change required**: Every app must edit `.sandstorm/Vagrantfile` to contain
       `config.vm.box = "sandstorm/debian-jessie64"` instead of
       `config.vm.box = "debian/jessie64"`.
 - Update `vagrant-spk up` to check for the above problem and inform people on
