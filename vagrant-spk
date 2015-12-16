@@ -243,7 +243,7 @@ Change it to:
   config.vm.box = "sandstorm/debian-jessie64"
 
 For details (including how to bypass this warning) read:
-https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.136
+https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.137
 
 Once you have done that, please re-run this command ("vagrant-spk up").""")
         should_bail = True
