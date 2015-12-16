@@ -6,9 +6,9 @@
     - Problem: The official Debian "jessie64" Vagrant base box stopped supporting
       VirtualBox file sharing. Specifically, version 8.2.2 of their base box made
       this change. This will result in sadness for `vagrant-spk` users: anyone who
-      runs `vagrant-spk up` and happens to get version 8.2.2 of the `debian/jessie64`
-      base box will not get working VirtualBox file sharing, resulting in apps that
-      fail to build.
+      runs `vagrant-spk up` on a new system will get version 8.2.2 of the `debian/jessie64`
+      base box, resulting in non-working VirtualBox file sharing, resulting in apps that
+      fail to build. You can also trigger the problem by running `vagrant box update`.
     - Solution: Sandstorm.io now maintains a
       [separate Vagrant base box](https://atlas.hashicorp.com/sandstorm/boxes/debian-jessie64)
       (called `sandstorm/debian-jessie64`) which does support VirtualBox file sharing.
