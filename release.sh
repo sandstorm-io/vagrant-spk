@@ -17,8 +17,15 @@ function assert_git_state_is_clean() {
     exit 1
   fi
 
-  # TODO(soon): Check that origin/master and HEAD are the same, to avoid a problem where it's easy
-  # to do a release but forget to "git push".
+  echo "**** Checking that you did a git push already... ****"
+  local ORIGIN_MASTER_GIT_REVISION="$(git rev-parse origin/master)"
+  local CURRENT_HEAD_GIT_REVISION="$(git rev-parse HEAD)"
+  if [[ "$ORIGIN_MASTER_GIT_REVISION" == "$CURRENT_HEAD_GIT_REVISION" ]]; then
+    echo "     success."
+  else
+    echo "     fail. Please do a git push and re-run this script."
+    exit 1
+  fi
 }
 
 function get_release_name() {
