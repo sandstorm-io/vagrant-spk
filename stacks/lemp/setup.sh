@@ -47,7 +47,7 @@ sed --in-place='' \
         /etc/php5/fpm/pool.d/www.conf
 # patch /etc/php5/fpm/php-fpm.conf to not have a pidfile
 sed --in-place='' \
-        --expression='s/^pid =/#pid =/' \
+        --expression='s/^pid =/;pid =/' \
         /etc/php5/fpm/php-fpm.conf
 # patch /etc/php5/fpm/pool.d/www.conf to no clear environment variables
 # so we can pass in SANDSTORM=1 to apps
