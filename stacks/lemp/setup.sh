@@ -40,14 +40,14 @@ systemctl disable php5-fpm
 systemctl disable mysql
 # patch /etc/php5/fpm/pool.d/www.conf to not change uid/gid to www-data
 sed --in-place='' \
-        --expression='s/^listen.owner = www-data/#listen.owner = www-data/' \
-        --expression='s/^listen.group = www-data/#listen.group = www-data/' \
-        --expression='s/^user = www-data/#user = www-data/' \
-        --expression='s/^group = www-data/#group = www-data/' \
+        --expression='s/^listen.owner = www-data/;listen.owner = www-data/' \
+        --expression='s/^listen.group = www-data/;listen.group = www-data/' \
+        --expression='s/^user = www-data/;user = www-data/' \
+        --expression='s/^group = www-data/;group = www-data/' \
         /etc/php5/fpm/pool.d/www.conf
 # patch /etc/php5/fpm/php-fpm.conf to not have a pidfile
 sed --in-place='' \
-        --expression='s/^pid =/#pid =/' \
+        --expression='s/^pid =/;pid =/' \
         /etc/php5/fpm/php-fpm.conf
 # patch /etc/php5/fpm/pool.d/www.conf to no clear environment variables
 # so we can pass in SANDSTORM=1 to apps
@@ -56,7 +56,7 @@ sed --in-place='' \
         /etc/php5/fpm/pool.d/www.conf
 # patch mysql conf to not change uid
 sed --in-place='' \
-        --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
+        --expression='s/^user\t\t= mysql/;user\t\t= mysql/' \
         /etc/mysql/my.cnf
 # patch mysql conf to use smaller transaction logs to save disk space
 cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
@@ -86,4 +86,3 @@ EOF
 sed --in-place='' \
         --expression 's/^fastcgi_param *HTTPS.*$/fastcgi_param  HTTPS               \$fe_https if_not_empty;/' \
         /etc/nginx/fastcgi_params
-
