@@ -1,3 +1,13 @@
+### v0.139 (2016-01-13)
+- New features:
+    - Add nodejs stack by @mnutt.
+    - Add `vagrant-spk verify` command by @zarvox.
+- BUG FIXES:
+    - In PHP configuration file, use semicolon as comment marker, not hash sign.
+      If you run into PHP errors related to this problem, you may need to
+      re-generate your `.sandstorm/*.sh` scripts, and destroy & recreate your
+      Vagrant box. Thanks to @ndarilek for finding.
+
 ### v0.137 (2015-12-16)
 - BREAKING CHANGE: Every Sandstorm app MUST change one line in `.sandstorm/Vagrantfile`.
     - **Change required**: Every app must edit `.sandstorm/Vagrantfile`. Find the line containing:
