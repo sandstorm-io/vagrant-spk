@@ -16,6 +16,10 @@ server {
     # limits by default.
     client_max_body_size 0;
 
+    # Prevent nginx from adding compression; this interacts badly with Sandstorm
+    # WebSession due to https://github.com/sandstorm-io/sandstorm/issues/289
+    gzip off;
+
     server_name localhost;
     root /opt/app;
     location / {
