@@ -35,7 +35,7 @@ server {
     }
 }
 EOF
-ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
+ln -sf /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
 service nginx stop
 service php5-fpm stop
 service mysql stop
