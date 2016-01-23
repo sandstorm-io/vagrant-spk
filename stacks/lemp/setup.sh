@@ -5,7 +5,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y nginx php5-fpm php5-mysql php5-cli php5-curl git php5-dev mysql-server
-unlink /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-php <<EOF
 server {
     listen 8000 default_server;
@@ -15,6 +15,10 @@ server {
     # are authenticated already, so there's no reason for apps to add additional
     # limits by default.
     client_max_body_size 0;
+
+    # Prevent nginx from adding compression; this interacts badly with Sandstorm
+    # WebSession due to https://github.com/sandstorm-io/sandstorm/issues/289
+    gzip off;
 
     server_name localhost;
     root /opt/app;
@@ -31,7 +35,7 @@ server {
     }
 }
 EOF
-ln -s /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
+ln -sf /etc/nginx/sites-available/sandstorm-php /etc/nginx/sites-enabled/sandstorm-php
 service nginx stop
 service php5-fpm stop
 service mysql stop

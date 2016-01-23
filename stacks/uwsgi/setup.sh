@@ -5,7 +5,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv
 # Set up nginx conf
-unlink /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-python <<EOF
 server {
     listen 8000 default_server;
@@ -27,7 +27,7 @@ server {
     }
 }
 EOF
-ln -s /etc/nginx/sites-available/sandstorm-python /etc/nginx/sites-enabled/sandstorm-python
+ln -sf /etc/nginx/sites-available/sandstorm-python /etc/nginx/sites-enabled/sandstorm-python
 # patch mysql conf to not change uid
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
