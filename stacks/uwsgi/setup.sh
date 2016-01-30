@@ -3,7 +3,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv
+apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv git
 # Set up nginx conf
 rm -f /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/sandstorm-python <<EOF
