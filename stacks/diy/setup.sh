@@ -7,6 +7,7 @@ set -euo pipefail
 # This is the ideal place to do things like:
 #
 #    export DEBIAN_FRONTEND=noninteractive
+#    apt-get update
 #    apt-get install -y nginx nodejs nodejs-legacy python2.7 mysql-server
 #
 # If the packages you're installing here need some configuration adjustments,
