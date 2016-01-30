@@ -511,6 +511,14 @@ def setup_vm(args):
     with open(vagrantfile_path, "w") as f:
         f.write(VAGRANTFILE_CONTENTS)
 
+    # Recursively copy in anything in the stack's service-config folder.
+    source_service_config_dir = stack_plugin.plugin_file("service-config")
+    target_service_config_dir = os.path.join(sandstorm_dir, "service-config")
+    if os.path.exists(source_service_config_dir):
+        if os.path.exists(target_service_config_dir):
+            shutil.rmtree(target_service_config_dir)
+        shutil.copytree(source_service_config_dir, target_service_config_dir)
+
     # Make a note of which stack was used
     stack_path = os.path.join(sandstorm_dir, "stack")
     with open(stack_path, "w") as f:
