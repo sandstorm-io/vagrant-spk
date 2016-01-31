@@ -9,4 +9,4 @@ rm -rf /var/run
 mkdir -p /var/run
 
 # Start nginx.
-/usr/sbin/nginx -g "daemon off;"
+/usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"
