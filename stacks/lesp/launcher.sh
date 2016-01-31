@@ -12,7 +12,7 @@ mkdir -p /var/run
 
 # Spawn php
 /usr/sbin/php5-fpm --nodaemonize --fpm-config /etc/php5/fpm/php-fpm.conf &
-# Wait until mysql and php have bound their sockets, indicating readiness
+# Wait until php has bound its socket, indicating readiness
 while [ ! -e /var/run/php5-fpm.sock ] ; do
     echo "waiting for php5-fpm to be available at /var/run/php5-fpm.sock"
     sleep .2
