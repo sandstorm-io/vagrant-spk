@@ -131,6 +131,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 end
 """
 
+GITIGNORE_CONTENTS = r"""
+
+# This file stores a list of sub-paths of .sandstorm/ that should be ignored by git.
+.vagrant
+
+"""
+
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
 
@@ -514,6 +521,11 @@ def setup_vm(args):
     # Recursively copy in anything in the stack's service-config folder.
     source_service_config_dir = stack_plugin.plugin_file("service-config")
     target_service_config_dir = os.path.join(sandstorm_dir, "service-config")
+    # Copy in a .gitignore file.
+    gitignore_path = os.path.join(sandstorm_dir, ".gitignore")
+    with open(gitignore_path, "ab") as f:
+        f.write(GITIGNORE_CONTENTS)
+
     if os.path.exists(source_service_config_dir):
         if os.path.exists(target_service_config_dir):
             shutil.rmtree(target_service_config_dir)
