@@ -132,8 +132,10 @@ end
 """
 
 GITIGNORE_CONTENTS = r"""
+
 # This file stores a list of sub-paths of .sandstorm/ that should be ignored by git.
 .vagrant
+
 """
 
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
