@@ -1,10 +1,9 @@
 #!/bin/bash
-set -euo pipefail
-# This script is run in the VM once when you first run `vagrant-spk up`.  It is
-# useful for installing system-global dependencies.  It is run exactly once
-# over the lifetime of the VM.
-#
 
+# When you change this file, you must take manual action. Read this doc:
+# - https://docs.sandstorm.io/en/latest/vagrant-spk/customizing/#setupsh
+
+set -euo pipefail
 # Install node.js
 
 # Discussion, issues and change requests at:

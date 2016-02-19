@@ -1,9 +1,9 @@
 #!/bin/bash
+
+# When you change this file, you must take manual action. Read this doc:
+# - https://docs.sandstorm.io/en/latest/vagrant-spk/customizing/#setupsh
+
 set -euo pipefail
-# This script is run in the VM once when you first run `vagrant-spk up`.  It is
-# useful for installing system-global dependencies.  It is run exactly once
-# over the lifetime of the VM.
-#
 # This is the ideal place to do things like:
 #
 #    export DEBIAN_FRONTEND=noninteractive
