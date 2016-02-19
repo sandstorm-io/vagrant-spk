@@ -199,7 +199,7 @@ def check_dot_sandstorm():
 def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
     command.extend(command_args)
-    print("Calling {} in {}".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
+    sys.stderr.write("Calling {} in {}\n".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
     return subprocess.check_call(command, cwd=sandstorm_dir)
 
 def ensure_working_vboxsf_in_base_box(sandstorm_dir):
@@ -622,6 +622,23 @@ def ssh(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh")
 
+def keygen(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c",
+            "spk keygen --keyring=/host-dot-sandstorm/sandstorm-keyring {}".format(
+                " ".join(args.command_specific_args)
+                )
+            )
+
+def getkey(args):
+    key_id = args.command_specific_args[0]
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c",
+            "spk getkey --keyring=/host-dot-sandstorm/sandstorm-keyring {}".format(key_id),
+            "--", "-T" # spk getkey refuses to print the output unless isatty() returns false,
+                       # so we make sure to disable TTY allocation.
+            )
+
 def main():
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
@@ -661,6 +678,12 @@ def main():
             "  Vagrant VMs on this host."),
         ('ssh', ssh,
             "SSH into the Vagrant VM."),
+        ('keygen', keygen,
+            "Generate a new key, add it to your keyring,\n"
+            "  and print the identifier."),
+        ('getkey', getkey,
+            "Given a key identifier, retrieve and print the\n"
+            "  corresponding private key from your keyring."),
     ]
 
     if ENABLE_EXPERIMENTAL:
