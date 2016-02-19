@@ -625,7 +625,10 @@ def ssh(args):
 def keygen(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c",
-            "spk keygen --keyring=/host-dot-sandstorm/sandstorm-keyring")
+            "spk keygen --keyring=/host-dot-sandstorm/sandstorm-keyring {}".format(
+                " ".join(args.command_specific_args)
+                )
+            )
 
 def getkey(args):
     key_id = args.command_specific_args[0]
