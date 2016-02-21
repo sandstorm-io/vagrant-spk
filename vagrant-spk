@@ -447,7 +447,7 @@ def auto(args):
     print('$', 'vagrant-spk dev')
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
-        "/opt/app/.sandstorm/build.sh",
+        "bash /opt/app/.sandstorm/build.sh",
     ]))
 
     print("*** Click around and make sure the app works OK ***")
@@ -485,14 +485,14 @@ def setup_vm(args):
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
     with open(global_setup_script_path, "wb") as f:
         f.write(GLOBAL_SETUP_SCRIPT)
-    os.chmod(global_setup_script_path, 0o755)
+    os.chmod(global_setup_script_path, 0o644)
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
     with open(setup_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("setup.sh"), "rb") as g:
             f.write(g.read())
-    os.chmod(setup_script_path, 0o755)
+    os.chmod(setup_script_path, 0o644)
 
     # Copy build script, if present, to sandstorm root.  If none is provided by
     # this stack, add an empty one so that users can customize it if needed.
@@ -504,14 +504,14 @@ def setup_vm(args):
                 f.write(g.read())
         else:
             f.write(EMPTY_BUILD_SCRIPT)
-    os.chmod(build_script_path, 0o755)
+    os.chmod(build_script_path, 0o644)
 
     # Copy default launcher script to sandstorm root for spk tracking
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("launcher.sh")) as g:
             f.write(g.read())
-    os.chmod(launcher_script_path, 0o755)
+    os.chmod(launcher_script_path, 0o644)
 
     # Copy in Vagrantfile
     vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
@@ -556,12 +556,12 @@ def init(args):
     stack_plugin = StackPlugin(stack)
     init_args = stack_plugin.init_args()
     # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /opt/app/.sandstorm/launcher.sh".format(init_args))
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- bash /opt/app/.sandstorm/launcher.sh".format(init_args))
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
-        "/opt/app/.sandstorm/build.sh",
+        "bash /opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ]))
