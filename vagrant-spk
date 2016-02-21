@@ -131,6 +131,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 end
 """
 
+GITATTRIBUTES_CONTENTS = r"""
+
+# vagrant-spk creates shell scripts, which must end in \n, even on a \r\n system.
+*.sh text eol=lf
+
+"""
+
 GITIGNORE_CONTENTS = r"""
 
 # This file stores a list of sub-paths of .sandstorm/ that should be ignored by git.
@@ -521,10 +528,16 @@ def setup_vm(args):
     # Recursively copy in anything in the stack's service-config folder.
     source_service_config_dir = stack_plugin.plugin_file("service-config")
     target_service_config_dir = os.path.join(sandstorm_dir, "service-config")
-    # Copy in a .gitignore file.
+
+    # Copy in a .gitignore file. See https://github.com/sandstorm-io/vagrant-spk/issues/30
     gitignore_path = os.path.join(sandstorm_dir, ".gitignore")
     with open(gitignore_path, "ab") as f:
         f.write(GITIGNORE_CONTENTS)
+
+    # Copy in a .gitattributes file. See https://github.com/sandstorm-io/vagrant-spk/issues/55
+    gitattributes_path = os.path.join(sandstorm_dir, ".gitattributes")
+    with open(gitattributes_path, "ab") as f:
+        f.write(GITATTRIBUTES_CONTENTS)
 
     if os.path.exists(source_service_config_dir):
         if os.path.exists(target_service_config_dir):
