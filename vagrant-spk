@@ -689,8 +689,7 @@ def main():
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
         ('reload', do_reload,
-            "Reboot the virtual machine, turning it off then on\n"
-            "  while retaining your data."),
+            "Reboot the virtual machine, turning it off then on."),
     ]
 
     if ENABLE_EXPERIMENTAL:
