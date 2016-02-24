@@ -488,7 +488,7 @@ def setup_vm(args):
         for stack in sorted(os.listdir(stacks_dir)):
             print("  {}".format(stack))
         print("")
-        return
+        sys.exit(1)
 
     stack_plugin_name = args.command_specific_args[0]
     stack_plugin = StackPlugin(stack_plugin_name)
