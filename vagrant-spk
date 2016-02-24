@@ -477,6 +477,19 @@ def auto(args):
 
 
 def setup_vm(args):
+    if (len(args.command_specific_args) == 0):
+        # No stack specified.  List known stacks.
+        print("No stack specified.  Try specifying a stack with:")
+        print("")
+        print("vagrant-spk setupvm <stack>")
+        print("")
+        print("Supported stacks:")
+        stacks_dir = os.path.join(CODE_DIR, "stacks")
+        for stack in sorted(os.listdir(stacks_dir)):
+            print("  {}".format(stack))
+        print("")
+        return
+
     stack_plugin_name = args.command_specific_args[0]
     stack_plugin = StackPlugin(stack_plugin_name)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
