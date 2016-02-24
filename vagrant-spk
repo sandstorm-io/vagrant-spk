@@ -628,6 +628,10 @@ def halt(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "halt")
 
+def do_reload(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "reload")
+
 def destroy(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "destroy", "--force")
@@ -701,6 +705,8 @@ def main():
         ('getkey', getkey,
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
+        ('reload', do_reload,
+            "Reboot the virtual machine, turning it off then on."),
     ]
 
     if ENABLE_EXPERIMENTAL:
