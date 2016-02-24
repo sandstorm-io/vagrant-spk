@@ -608,6 +608,10 @@ def verify(args):
         os.remove(temp_spk)
 
 def publish(args):
+    if len(args.command_specific_args) == 0:
+        print("Please specify an .spk file to publish - e.g.")
+        print("  vagrant-spk publish example.spk")
+        sys.exit(1)
     # Sadly, we have to copy the spk into the VM since it could be anywhere on the host filesystem
     spk = args.command_specific_args[0]
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
