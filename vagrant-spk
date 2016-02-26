@@ -565,6 +565,10 @@ def setup_vm(args):
     with open(stack_path, "w") as f:
         f.write(stack_plugin_name + "\n")
 
+def deprecated_bring_up_vm(args):
+    warn_deprecated("up")
+    bring_up_vm(args)
+
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
@@ -640,22 +644,30 @@ def publish(args):
     finally:
         os.remove(temp_spk)
 
-def halt(args):
+def warn_deprecated(command_name):
+    sys.stderr.write("WARNING: `vagrant-spk {0}` is deprecated and may be removed in the future.\nPrefer `vagrant-spk vm {0}`.\n".format(command_name))
+
+def deprecated_halt(args):
+    warn_deprecated("halt")
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "halt")
 
-def do_reload(args):
+def deprecated_do_reload(args):
+    warn_deprecated("reload")
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "reload")
 
-def destroy(args):
+def deprecated_destroy(args):
+    warn_deprecated("destroy")
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "destroy", "--force")
 
-def global_status(args):
+def deprecated_global_status(args):
+    warn_deprecated("global_status")
     return subprocess.check_call(["vagrant", "global-status"])
 
-def ssh(args):
+def deprecated_ssh(args):
+    warn_deprecated("ssh")
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh")
 
@@ -676,6 +688,28 @@ def getkey(args):
                        # so we make sure to disable TTY allocation.
             )
 
+def vm_subcommand(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    if len(args.command_specific_args) == 0:
+        sys.stderr.write("Try specifying a command to pass through to vagrant, like\n\nvagrant-spk vm up\n\n")
+        sys.exit(1)
+
+    # Do a couple sanity checks.
+    ensure_host_sandstorm_folder_exists()
+    if not os.path.exists(sandstorm_dir) or not os.path.exists(os.path.join(sandstorm_dir, "Vagrantfile")):
+        sys.stderr.write("You can't call `vm` commands if there's no `.sandstorm` folder.\n" +
+                "Try `vagrant-spk setupvm <stack>` first.\n")
+        sys.exit(1)
+
+    subcommand = args.command_specific_args[0]
+    # Do subcommand specific sanity checks.
+    if subcommand == 'up':
+        # Sanity-check that the user will get a Vagrant box that supports vboxsf, since
+        # vagrant-spk depends on that for now.
+        ensure_working_vboxsf_in_base_box(sandstorm_dir)
+
+    call_vagrant_command(sandstorm_dir, *args.command_specific_args)
+
 def main():
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
@@ -688,7 +722,7 @@ def main():
             "  --work-directory (using the provided `stack` \n"
             "  command arg).  Also inits developer keys in \n"
             "  ~/.sandstorm on this host."),
-        ('up', bring_up_vm,
+        ('up', deprecated_bring_up_vm,
             "Start the Vagrant VM (and build the VM image \n"
             "  if necessary)."),
         ('init', init,
@@ -705,24 +739,26 @@ def main():
         ('publish', publish,
             "Send the current packed app spk to \n"
             "  the Sandstorm App Market."),
-        ('halt', halt,
-            "Shut down the Vagrant VM."),
-        ('destroy', destroy,
-            "Delete the Vagrant VM (but leave \n"
+        ('vm', vm_subcommand,
+            "Pass through all following arguments to `vagrant`."),
+        ('halt', deprecated_halt,
+            "(deprecated, use 'vm halt') Shut down the Vagrant VM."),
+        ('destroy', deprecated_destroy,
+            "(deprecated, use 'vm destroy') Delete the Vagrant VM (but leave \n"
             "  --work-directory untouched)."),
-        ('global-status', global_status,
-            "Show the state of all active \n"
+        ('global-status', deprecated_global_status,
+            "(deprecated, use 'vm global-status') Show the state of all active \n"
             "  Vagrant VMs on this host."),
-        ('ssh', ssh,
-            "SSH into the Vagrant VM."),
+        ('ssh', deprecated_ssh,
+            "(deprecated, use 'vm ssh') SSH into the Vagrant VM."),
         ('keygen', keygen,
             "Generate a new key, add it to your keyring,\n"
             "  and print the identifier."),
         ('getkey', getkey,
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
-        ('reload', do_reload,
-            "Reboot the virtual machine, turning it off then on."),
+        ('reload', deprecated_do_reload,
+            "(deprecated, use 'vm reload') Reboot the virtual machine, turning it off then on."),
     ]
 
     if ENABLE_EXPERIMENTAL:
