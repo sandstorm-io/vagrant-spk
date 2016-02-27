@@ -645,7 +645,15 @@ def publish(args):
         os.remove(temp_spk)
 
 def warn_deprecated(command_name):
-    sys.stderr.write("WARNING: `vagrant-spk {0}` is deprecated and may be removed in the future.\nPrefer `vagrant-spk vm {0}`.\n".format(command_name))
+    ANSI_RED = "\x1b[31m"
+    ANSI_RESET = "\x1b[0m"
+    message = "\n".join([
+      ANSI_RED + "WARNING: `vagrant-spk {0}` is deprecated and will be removed on August 1, 2016.".format(command_name),
+      "Prefer `vagrant-spk vm {0}`.".format(command_name),
+      ANSI_RESET + "For more information, see https://groups.google.com/forum/#!topic/sandstorm-dev/cuSNJ3IsP6I",
+      ""
+    ])
+    sys.stderr.write(message)
 
 def deprecated_halt(args):
     warn_deprecated("halt")
