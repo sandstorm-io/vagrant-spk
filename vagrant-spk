@@ -718,6 +718,15 @@ def vm_subcommand(args):
 
     call_vagrant_command(sandstorm_dir, *args.command_specific_args)
 
+
+class Command(object):
+    def __init__(self, name, func, helptext, hidden=False):
+        self.name = name
+        self.func = func # func may be None if this is intended only for the help text
+        self.helptext = helptext
+        self.hidden = hidden # if true, do not show in vagrant-spk --help
+
+
 def main():
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
@@ -725,62 +734,69 @@ def main():
         ENABLE_EXPERIMENTAL = True
 
     operations = [
-        ('setupvm', setup_vm,
+        Command('setupvm', setup_vm,
             "Set up a fresh app environment in \n"
             "  --work-directory (using the provided `stack` \n"
             "  command arg).  Also inits developer keys in \n"
             "  ~/.sandstorm on this host."),
-        ('up', deprecated_bring_up_vm,
-            "Start the Vagrant VM (and build the VM image \n"
-            "  if necessary)."),
-        ('init', init,
+        Command('vm', vm_subcommand,
+            "Pass through all subsequent arguments to `vagrant` run in `.sandstorm`."),
+        Command('vm up', None, "Start the Vagrant VM (and build the VM image if needed)"),
+        Command('init', init,
             "Initialize fresh Sandstorm package definition \n"
             "  resources in --work-directory."),
-        ('dev', dev,
+        Command('dev', dev,
             "Make the current app available to Sandstorm \n"
             "  in dev mode (after bringing the Vagrant VM `up`)"),
-        ('pack', pack,
+        Command('pack', pack,
             "Pack the curent app into a \n"
             "  Sandstorm package."),
-        ('verify', verify,
+        Command('verify', verify,
             "Show details of the specified Sandstorm package."),
-        ('publish', publish,
+        Command('publish', publish,
             "Send the current packed app spk to \n"
             "  the Sandstorm App Market."),
-        ('vm', vm_subcommand,
-            "Pass through all following arguments to `vagrant`."),
-        ('halt', deprecated_halt,
-            "(deprecated, use 'vm halt') Shut down the Vagrant VM."),
-        ('destroy', deprecated_destroy,
-            "(deprecated, use 'vm destroy') Delete the Vagrant VM (but leave \n"
-            "  --work-directory untouched)."),
-        ('global-status', deprecated_global_status,
-            "(deprecated, use 'vm global-status') Show the state of all active \n"
-            "  Vagrant VMs on this host."),
-        ('ssh', deprecated_ssh,
-            "(deprecated, use 'vm ssh') SSH into the Vagrant VM."),
-        ('keygen', keygen,
+        Command('vm halt', None, "Shut down the Vagrant VM."),
+        Command('vm destroy', None, "Delete the Vagrant VM (but leave --work-directory untouched)."),
+        Command('vm ssh', None, "SSH into the Vagrant VM."),
+        Command('keygen', keygen,
             "Generate a new key, add it to your keyring,\n"
             "  and print the identifier."),
-        ('getkey', getkey,
+        Command('getkey', getkey,
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
-        ('reload', deprecated_do_reload,
-            "(deprecated, use 'vm reload') Reboot the virtual machine, turning it off then on."),
+
+        # Below here are deprecated functions that we don't want to show in the help,
+        # but which we still need to dispatch until August 1, 2016.
+        Command('up', deprecated_bring_up_vm,
+            "(deprecated, use 'vagrant-spk vm halt') Start the Vagrant VM\n"
+            "  (and build the VM image if necessary).", hidden=True),
+        Command('reload', deprecated_do_reload,
+            "(deprecated, use 'vagrant-spk vm reload') Reboot the virtual machine, turning it off then on."),
+        Command('halt', deprecated_halt,
+            "(deprecated, use 'vagrant-spk vm halt') Shut down the Vagrant VM.", hidden=True),
+        Command('destroy', deprecated_destroy,
+            "(deprecated, use 'vagrant-spk vm destroy') Delete the Vagrant VM (but leave \n"
+            "  --work-directory untouched).", hidden=True),
+        Command('global-status', deprecated_global_status,
+            "(deprecated, use 'vagrant-spk vm global-status') Show the state of all active \n"
+            "  Vagrant VMs on this host.", hidden=True),
+        Command('ssh', deprecated_ssh,
+            "(deprecated, use 'vagrant-spk vm ssh') SSH into the Vagrant VM.", hidden=True),
     ]
 
     if ENABLE_EXPERIMENTAL:
         operations.append(
-            ('auto', auto,
+            Command('auto', auto,
              "Automatically package the app in \n"
              "  --work-directory (using the provided `stack` \n"
              "  command arg. Also inits developer keys in \n"
              "  ~/.sandstorm on this host. (EXPERIMENTAL)"))
 
-    op_to_func = dict((cmd, f) for cmd, f, helptext in operations)
-    ops_helptext = '\n'.join(cmd + ': ' + helptext for cmd, f, helptext in operations)
+    op_to_func = dict((c.name, c.func) for c in operations if c.func)
+    ops_helptext = '\n'.join(c.name + ': ' + c.helptext for c in operations if not c.hidden)
     parser = argparse.ArgumentParser(prog=sys.argv[0], formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("command", choices=[cmd for cmd, _, _ in operations], help=ops_helptext)
+    parser.add_argument("command", choices=[c.name for c in operations], help=ops_helptext)
     parser.add_argument("command_specific_args", nargs="*")
     parser.add_argument(
         "--work-directory",
