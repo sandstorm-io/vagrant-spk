@@ -742,6 +742,9 @@ def main():
         Command('vm', vm_subcommand,
             "Pass through all subsequent arguments to `vagrant` run in `.sandstorm`."),
         Command('vm up', None, "Start the Vagrant VM (and build the VM image if needed)"),
+        Command('vm halt', None, "Shut down the Vagrant VM."),
+        Command('vm destroy', None, "Delete the Vagrant VM (but leave --work-directory untouched)."),
+        Command('vm ssh', None, "SSH into the Vagrant VM."),
         Command('init', init,
             "Initialize fresh Sandstorm package definition \n"
             "  resources in --work-directory."),
@@ -756,9 +759,6 @@ def main():
         Command('publish', publish,
             "Send the current packed app spk to \n"
             "  the Sandstorm App Market."),
-        Command('vm halt', None, "Shut down the Vagrant VM."),
-        Command('vm destroy', None, "Delete the Vagrant VM (but leave --work-directory untouched)."),
-        Command('vm ssh', None, "SSH into the Vagrant VM."),
         Command('keygen', keygen,
             "Generate a new key, add it to your keyring,\n"
             "  and print the identifier."),
