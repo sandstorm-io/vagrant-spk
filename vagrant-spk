@@ -137,6 +137,10 @@ GITATTRIBUTES_CONTENTS = r"""
 # vagrant-spk creates shell scripts, which must end in \n, even on a \r\n system.
 *.sh text eol=lf
 
+# vagrant-spk (via "spk dev") creates a sandstorm-files.list, which is evaluated in the context of a
+# Linux system. Therefore, this file should always end in \n not \r\n.
+sandstorm-files.list eof=lf
+
 """
 
 GITIGNORE_CONTENTS = r"""
