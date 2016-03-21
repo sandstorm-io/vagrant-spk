@@ -26,7 +26,7 @@ sudo dnf install virt-manager libvirt libvirt-daemon
 On Debian/Ubuntu:
 
 ```
-sudo apt-get install libvirtd virt-manager
+sudo apt-get install libvirt-bin virt-manager
 ```
 
 
