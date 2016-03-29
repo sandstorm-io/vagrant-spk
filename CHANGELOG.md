@@ -1,3 +1,27 @@
+### v0.155 (2016-03-28)
+- Two big user-facing changes:
+    - Vagrant commands operate via "vagrant-spk vm {{commandName}}" now.
+      For details: https://groups.google.com/forum/#!msg/sandstorm-dev/cuSNJ3IsP6I/26PzwiX4AgAJ
+    - Use a .sandstorm/service-config/ directory for daemon config files,
+      rather than asking users to monkey with /etc in a pseudo-deterministic
+      fashion.
+- Docs improvements: Add a libvirt README to GitHub.
+- Usability refinements:
+    - Network performance: Use PCNet-Fast III by default for virtual machines.
+    - Error handling: exit(1) when specifying no stack to setupvm.
+    - Interactive docs: 'vagrant-spk setupvm' now prints a list of known stacks.
+    - Error handling: Stop crashing when user forgets filename for 'vagrant-spk publish'.
+    - Default 'setup.sh' tells users they might need to re-run 'provision'.
+    - Default apt configuration will retry on failure.
+    - Provide a .sandstorm/.gitignore to avoid users committing useless cruft.
+    - Support 'vagrant-spk keygen -- -q' for use by scripts.
+    - Vagrantfile: Stop mounting '/vagrant' - this is a duplicate of /opt/app.
+    - Python stack: install git by default, since pip/requirements.txt might need it.
+    - Add PHP & sqlite stack, to minimize bloat for PHP apps that don't need MySQL.
+    - Use 'rm -f' and 'ln -sf' for idempotence.
+    - Set 'gzip off;' by default, to work around a Sandstorm bug that results
+      in meaningless gobbledy-gook on error pages.
+
 ### v0.139 (2016-01-13)
 - New features:
     - Add nodejs stack by @mnutt.
