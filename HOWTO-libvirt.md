@@ -26,7 +26,7 @@ sudo dnf install virt-manager libvirt libvirt-daemon
 On Debian/Ubuntu:
 
 ```
-sudo apt-get install libvirt-bin virt-manager
+sudo apt-get install libvirt-daemon-system virt-manager
 ```
 
 
@@ -39,7 +39,7 @@ sudo dnf install vagrant
 ```
 
 
-## Install vagrant-libvirt 
+## Install vagrant-libvirt
 
 Fedora:
 
