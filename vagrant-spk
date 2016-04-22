@@ -32,7 +32,20 @@ import sys
 
 PWD = os.getcwd()
 ENABLE_EXPERIMENTAL = False
-CODE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+
+EXECUTABLE_PATH = os.path.realpath(sys.argv[0])
+
+# When run as bundled by pyinstaller, sys.argv[0] is simply "vagrant-spk".
+# os.path.realpath("vagrant-spk") will produce a path in the current working directory, which
+# probably doesn't actually exist, and definitely doesn't contain the "stacks" folder that we
+# expect to find in the same folder as the executable.  So in that environment, use
+# sys.executable to find the folder the program is running from.
+# When run not bundled, sys.executable is something like /usr/bin/python, so only try this
+# if sys.argv[0] doesn't appear to be an actual living file.
+if not os.path.exists(EXECUTABLE_PATH):
+    EXECUTABLE_PATH = sys.executable
+CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
+
 VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
