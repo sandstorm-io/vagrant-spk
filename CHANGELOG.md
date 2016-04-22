@@ -1,3 +1,9 @@
+### v0.159 (2016-04-22)
+- BUG FIX:
+    - "vagrant-spk setupvm" would reliably crash on Windows 10, and
+      perhaps other Windows systems. Bug reported by hexx on IRC;
+      fixed by Drew Fisher. Thanks to hexx for the report.
+
 ### v0.155 (2016-03-28)
 - Two big user-facing changes:
     - Vagrant commands operate via "vagrant-spk vm {{commandName}}" now.
