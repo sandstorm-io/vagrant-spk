@@ -614,6 +614,10 @@ def init(args):
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    if not os.path.exists(os.path.join(sandstorm_dir, 'sandstorm-pkgdef.capnp')):
+        sys.stderr.write("No .sandstorm/sandstorm-pkgdef.capnp file found.\n" +
+                         "Try `vagrant-spk init` first.\n")
+        sys.exit(1)
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "/opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
