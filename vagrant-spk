@@ -171,7 +171,7 @@ echo localhost > /etc/hostname
 hostname localhost
 
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
-# output file. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
+# output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
 curl $CURL_OPTS https://install.sandstorm.io/ 2>&1 > /host-dot-sandstorm/caches/install.sh | cat
 
 SANDSTORM_CURRENT_VERSION=$(curl $CURL_OPTS -f "https://install.sandstorm.io/dev?from=0&type=install")
