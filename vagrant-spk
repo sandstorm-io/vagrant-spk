@@ -692,7 +692,7 @@ def deprecated_destroy(args):
     call_vagrant_command(sandstorm_dir, "destroy", "--force")
 
 def deprecated_global_status(args):
-    warn_deprecated("global_status")
+    warn_deprecated("global-status")
     return subprocess.check_call(["vagrant", "global-status"])
 
 def deprecated_ssh(args):
