@@ -5,3 +5,6 @@ vendor/
 windows-support/state/
 dist/
 vagrant-spk.spec
+
+# The following file patterns are auto-created by editors like Emacs.
+.#*
