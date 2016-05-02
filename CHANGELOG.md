@@ -1,4 +1,6 @@
 ### v0.161 (2016-05-02)
+- BUG FIX:
+    - Fix typo in deprecation warning when running: `vagrant-spk global-status`.
 - Usability refinement:
     - Going forward, pipe `curl` output through `cat` so that it is
       more aggressively buffered and Vagrant shows it on one line.
