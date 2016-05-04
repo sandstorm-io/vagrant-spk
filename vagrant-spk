@@ -227,6 +227,23 @@ def check_dot_sandstorm():
     if not os.path.exists(expected_vagrantfile_path):
         raise Exception("expected a Vagrantfile at {} - try 'vagrant-spk setupvm lemp' to generate one".format(expected_vagrantfile_path))
 
+def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
+                                              vagrant_ssh_command_string,
+                                              assert_exit_success=True):
+    p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
+                         stdout=subprocess.PIPE,
+                         stdin=subprocess.PIPE,
+                         cwd=sandstorm_dir)
+    out, err = p.communicate()
+    # Ignore stderr, since it contains the vagrant output line of "Connection closed"
+    # and our commands work via stdout anyway.
+    if assert_exit_success:
+        if p.returncode != 0:
+            raise ValueError("Yikes, the command crashed. Command was: %s",
+                             vagrant_ssh_command_string)
+    return out
+
+
 def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
     command.extend(command_args)
@@ -626,9 +643,32 @@ def dev(args):
 
 def devjoin(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    sys.stderr.write("Looking for apps in dev mode...\n")
+    data_from_guest = call_vagrant_ssh_command_capturing_output(
+        sandstorm_dir,
+        '''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q "Uid:.*$SANDSTORM_UID" && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l "^PPid:\s*$pid$" /proc/*/status  | sed -r 's,/proc/(.*)/status,\1,') ; done''')
+    sys.stderr.write(data_from_guest + '\n')
+    sys.exit(0)
+    spk_pids = call_vagrant_ssh_command_capturing_output(
+        sandstorm_dir,
+        'pidof spk', assert_exit_success=False).strip()
+    if not spk_pids:
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Try `vagrant-spk dev` first.\n")
+        sys.exit(1)
+    sys.stderr.write("Looking for grains...\n")
+    supervisor_pids = call_vagrant_ssh_command_capturing_output(
+        sandstorm_dir,
+        'SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') for pid in $(pidof supervisor); do echo -n $pid $(/proc/$pid/ ', assert_exit_success=False).strip()
+    if not supervisor_pids:
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Try creating a grain in your browser.\n")
+        sys.exit(1)
+    else:
+        print(supevisor_pids)
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm",
-        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid --user"
+        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid --user --setgid 1000 --setuid 1000"
     ]))
 
 def pack(args):
