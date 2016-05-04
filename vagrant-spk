@@ -628,7 +628,7 @@ def devjoin(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm",
-        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid"
+        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid --user"
     ]))
 
 def pack(args):
