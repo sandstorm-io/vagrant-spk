@@ -219,6 +219,21 @@ set -euo pipefail
 exit 0
 """
 
+def format_devjoin_grain_choices(supervisors):
+    assert supervisors  # caller is supposed to bail out for us if this is empty
+    msg = (
+'''This will run bash in the context of a grain. Here is a list of running
+grains you can attach to. Press enter to choose the first one, or type the
+number next to the grain ID to choose it.
+
+''')
+    for i, datum in enumerate(supervisors):
+        human_printable_i = i + 1
+        msg += "%d. %s\n" % (human_printable_i, datum['grain_id'])
+    msg += '''
+Your choice: [1] '''
+    return msg
+
 def check_dot_sandstorm():
     expected_path = os.path.join(PWD, ".sandstorm")
     if not os.path.isdir(expected_path):
@@ -644,14 +659,64 @@ def dev(args):
 def devjoin(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     sys.stderr.write("Looking for apps in dev mode...\n")
+    # The following vagrant-spk ssh command checks for two things.
+    #
+    # - Is spk dev running? and
+    # - What are the supervisor processes?
+    #
+    # The supervisor process check also sanity-checks that they are owned by
+    # a user ID called sandstorm, which vagrant-spk assumes is the value of
+    # SERVER_USER in sandstorm.conf, and looks for the grain ID by looking at
+    # argv of the supervisor - the grain ID is the first parameter that does
+    # not contain a hyphen. It also searches for the first child process of the
+    # supervisor, sorted nondeterministically, but that should be OK because the
+    # supervisor should have only one child process.
+    #
+    # vagrant is slow to start up, so we run both checks in the same vagrant
+    # ssh invocation.
     data_from_guest = call_vagrant_ssh_command_capturing_output(
         sandstorm_dir,
-        '''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q "Uid:.*$SANDSTORM_UID" && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l "^PPid:\s*$pid$" /proc/*/status  | sed -r 's,/proc/(.*)/status,\1,') ; done''')
-    sys.stderr.write(data_from_guest + '\n')
-    sys.exit(0)
+        r'''pidof spk || echo no-spk;''' +
+        r'''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; ''' +
+        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q "Uid:.*$SANDSTORM_UID" && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l "^PPid:\s*$pid$" /proc/*/status | head -n1  | sed -r 's,/proc/(.*)/status,\1,') ; done'''
+        # get pid of supervisor, check process owner, get first child process
+    )
+    splitted = data_from_guest.splitlines()
+    spk_pid = splitted[0]
+    if spk_pid == 'no-spk':
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Try `vagrant-spk dev` first.\n")
+        sys.exit(1)
+    supervisor_pid_info = splitted[1:]
+    sys.stderr.write("Looking for grains...\n")
+    if supervisor_pid_info:
+        sys.stderr.write('\n')
+    else:
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Try creating a grain in your browser.\n")
+        sys.exit(1)
+    supervisors = []
+    for line in supervisor_pid_info:
+        try:
+            supervisor_pid, ownership_check, grain_id, child_pid = line.split()
+        except:
+            sys.stderr('Error parsing line: %s. Crashing.' % line)
+            raise
+        if ownership_check == 'ownership-correct':
+            supervisors.append({
+                'supervisor_pid': supervisor_pid,
+                'grain_id': grain_id,
+                'child_pid': int(child_pid),
+            })
+    grain_choice_human_readable = raw_input(format_devjoin_grain_choices(supervisors)).strip()
+    if not grain_choice_human_readable:
+        grain_choice_human_readable = "1"  # by default
+    chosen_supervisor = supervisors[int(grain_choice_human_readable) - 1]
+    sys.stderr.write("OK. Chosen grain ID %s, whose child PID is %d. Attaching...\n" %
+                     (chosen_supervisor['grain_id'], chosen_supervisor['child_pid']))
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm",
-        "sudo nsenter --target $(pidof sandstorm-http-bridge) --wd --mount --net --ipc --uts --pid --user --setgid 1000 --setuid 1000"
+        "sudo strace -ff nsenter --target %d --wd --mount --net --ipc --uts --pid --user --setgid 1000 --setuid 1000 /bin/true" % (chosen_supervisor['child_pid'])
     ]))
 
 def pack(args):
