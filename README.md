@@ -11,7 +11,7 @@ See also https://github.com/sandstorm-io/sandstorm/wiki/Porting-an-app-with-vagr
     export PATH=$(pwd)/vagrant-spk:$PATH
     cd php-app-to-package-for-sandstorm
     vagrant-spk setupvm lemp
-    vagrant-spk up
+    vagrant-spk vm up
     vagrant-spk init
     # edit .sandstorm/sandstorm-pkgdef.capnp in your editor of choice
     vagrant-spk dev
