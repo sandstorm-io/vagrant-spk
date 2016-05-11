@@ -128,7 +128,7 @@ you open a shell that you use `vagrant-spk` in.
 Now, whenever you use vagrant-spk, vagrant should attempt to use the libvirt backend when creating VMs. :)
 
 If you have an app where vagrant-spk previously created a VirtualBox VM, vagrant will continue to interact
-with that VM until you run `vagrant-spk destroy`, after which the next `vagrant-spk up` should create a libvirt VM.
+with that VM until you run `vagrant-spk vm destroy`, after which the next `vagrant-spk vm up` should create a libvirt VM.
 
 ## Optional: PolicyKit rule for quality-of-life improvement
 
