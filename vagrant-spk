@@ -531,7 +531,7 @@ def auto(args):
     print('$', 'vagrant-spk dev')
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
-        "/opt/app/.sandstorm/build.sh",
+        "bash /opt/app/.sandstorm/build.sh",
     ]))
 
     print("*** Click around and make sure the app works OK ***")
@@ -663,12 +663,12 @@ def init(args):
     stack_plugin = StackPlugin(stack)
     init_args = stack_plugin.init_args()
     # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /opt/app/.sandstorm/launcher.sh".format(init_args))
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /bin/bash /opt/app/.sandstorm/launcher.sh".format(init_args))
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
-        "/opt/app/.sandstorm/build.sh",
+        "bash /opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ]))
