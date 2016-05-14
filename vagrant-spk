@@ -25,6 +25,7 @@ from __future__ import print_function
 import argparse
 import os
 import glob
+import hashlib
 import re
 import shutil
 import subprocess
@@ -219,6 +220,23 @@ set -euo pipefail
 exit 0
 """
 
+def format_shell_grain_choices(supervisors):
+    '''Return a formatted message based on the list of supervisor PIDs that were found, asking which
+    grain the user wants to attach a shell to.'''
+
+    assert supervisors  # caller is supposed to bail out for us if this is empty
+    msg = (
+'''This will run a shell in the context of a grain. Here is a list of running
+grains you can attach to. Press enter to choose the first one, or type the
+number next to the grain ID to choose it.''' + '\n\n')
+    for i, datum in enumerate(supervisors):
+        human_printable_i = i + 1
+        msg += "{}. {}\n".format(
+            human_printable_i, datum['grain_id'])
+    msg += '\n'
+    msg += 'Your choice: [1] '
+    return msg
+
 def check_dot_sandstorm():
     expected_path = os.path.join(PWD, ".sandstorm")
     if not os.path.isdir(expected_path):
@@ -226,6 +244,41 @@ def check_dot_sandstorm():
     expected_vagrantfile_path = os.path.join(expected_path, "Vagrantfile")
     if not os.path.exists(expected_vagrantfile_path):
         raise Exception("expected a Vagrantfile at {} - try 'vagrant-spk setupvm lemp' to generate one".format(expected_vagrantfile_path))
+
+def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
+                                              vagrant_ssh_command_string,
+                                              assert_exit_success=True):
+    p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
+                         stdout=subprocess.PIPE,
+                         stdin=subprocess.PIPE,
+                         cwd=sandstorm_dir)
+    out, err = p.communicate()
+    # Ignore stderr, since it contains the vagrant output line of "Connection closed"
+    # and our commands work via stdout anyway.
+    if assert_exit_success:
+        if p.returncode != 0:
+            raise ValueError("Yikes, the command crashed. Command was: %s",
+                             vagrant_ssh_command_string)
+    return out
+
+
+def call_vagrant_ssh_command_providing_stdin(sandstorm_dir,
+                                             vagrant_ssh_command_string,
+                                             stdin,
+                                             assert_exit_success=True):
+    p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
+                         stdout=subprocess.PIPE,
+                         stdin=subprocess.PIPE,
+                         cwd=sandstorm_dir)
+    out, err = p.communicate(input=stdin)
+    # Ignore stderr, since it contains the vagrant output line of "Connection closed"
+    # and our commands work via stdout anyway.
+    if assert_exit_success:
+        if p.returncode != 0:
+            raise ValueError("Yikes, the command crashed. Command was: %s",
+                             vagrant_ssh_command_string)
+    return out
+
 
 def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
@@ -620,6 +673,128 @@ def dev(args):
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ]))
 
+def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary,
+                                  tmp_vagrant_spk_dir, enter_grain_binary_path):
+    ### The purpose of this function is to take a PID, which is presumably the root process of a
+    ### grain within the vagrant-spk VM, and make sure that /tmp/vagrant-spk/enter_grain is the
+    ### binary that we want. If is isn't, then inject it.
+    sys.stderr.write("Adding enter_grain program to the grain in /tmp/vagrant-spk/enter-grain...\n")
+    tmp_vagrant_spk_dir = '/proc/{}/root/tmp/vagrant-spk'.format(pid)
+    enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
+    commands = ' && '.join([
+        # Make sure /tmp/vagrant-spk exists in the VM.
+        'sudo mkdir -p {}'.format(tmp_vagrant_spk_dir),
+        # If the sha1sum tool exists, and the binary in this directory has the right sha1sum,
+        # then skip sending it over.
+        'if which sha1sum >/dev/null && sudo sha1sum {} 2>/dev/null | grep -q ^{} ; then sudo chmod 755 {} && exit 0 ; fi'.format(
+            enter_grain_binary_path, enter_grain_checksum, enter_grain_binary_path),
+        # If not, then use dd to inject it in. dd is more convenient than cat here because dd opens
+        # the file itself, so `sudo dd` can easily write to files that the "vagrant" user can't.
+        'sudo dd of={} 2>/dev/null'.format(enter_grain_binary_path),
+        'sudo chmod 755 {}'.format(enter_grain_binary_path),        
+        ])
+    call_vagrant_ssh_command_providing_stdin(
+        sandstorm_dir,
+        commands,
+        stdin=enter_grain_binary)
+
+def shell(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    try:
+        filename = os.path.join(CODE_DIR, 'helpers', 'enter_grain')
+        with open(filename, 'rb') as fd:
+            enter_grain_binary = fd.read()
+        # There should be a .sha1 file next to the binary, just to make sure that it is not
+        # accidentally corrupted. If it is the empty string, ignore it; this way, we can avoid
+        # checksum errors while developing the binary.
+        with open(os.path.join(CODE_DIR, 'helpers', 'enter_grain.sha1'), 'rb') as fd:
+            desired_checksum = fd.read().strip()
+        found_checksum = hashlib.sha1(enter_grain_binary).hexdigest()
+        if (desired_checksum and (desired_checksum != found_checksum)):
+            raise RuntimeError("ERROR: This vagrant-spk bundle seems to be corrupt: bad checksum on enter_grain binary.")
+    except Exception as e:
+        sys.stderr.write("ERROR: Failed to load enter_grain binary.")
+        raise
+    sys.stderr.write("Looking for apps in dev mode...\n")
+    # The following vagrant-spk ssh command checks for two things.
+    #
+    # - Is spk dev running? and
+    # - What are the supervisor processes?
+    #
+    # The supervisor process check also sanity-checks that they are owned by
+    # a user ID called sandstorm, which vagrant-spk assumes is the value of
+    # SERVER_USER in sandstorm.conf, and looks for the grain ID by looking at
+    # argv of the supervisor - the grain ID is the first parameter that does
+    # not contain a hyphen. It also searches for the first child process of the
+    # supervisor, sorted nondeterministically, but that should be OK because the
+    # supervisor should have only one child process.
+    #
+    # vagrant is slow to start up, so we run both checks in the same vagrant
+    # ssh invocation.
+    data_from_guest = call_vagrant_ssh_command_capturing_output(
+        sandstorm_dir,
+        r'''pidof spk || echo no-spk;''' +
+        r'''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; ''' +
+        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q "Uid:.*$SANDSTORM_UID" && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l "^PPid:\s*$pid$" /proc/*/status | head -n1  | sed -r 's,/proc/(.*)/status,\1,') ; done'''
+        # get pid of supervisor, check process owner, get first child process
+    )
+    splitted = data_from_guest.splitlines()
+    spk_pid = splitted[0]
+    if spk_pid == 'no-spk':
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Try `vagrant-spk dev` first.\n")
+        sys.exit(1)
+    supervisor_pid_info = splitted[1:]
+    sys.stderr.write("Looking for grains...\n")
+    if supervisor_pid_info:
+        sys.stderr.write('\n')
+    else:
+        sys.stderr.write("No Sandstorm supervisor processes found.\n" +
+                         "Make sure to open a grain of this app in your web browser.\n")
+        sys.exit(1)
+    supervisors = []
+    for line in supervisor_pid_info:
+        try:
+            supervisor_pid, ownership_check, grain_id, child_pid = line.split()
+        except:
+            sys.stderr('Error parsing line: %s. Crashing.' % line)
+            raise
+        if ownership_check == 'ownership-correct':
+            supervisors.append({
+                'supervisor_pid': supervisor_pid,
+                'grain_id': grain_id,
+                'child_pid': int(child_pid),
+            })
+    grain_choice_human_readable = raw_input(format_shell_grain_choices(supervisors)).strip()
+    if not grain_choice_human_readable:
+        grain_choice_human_readable = "1"  # by default
+    try:
+        grain_choice_as_int = int(grain_choice_human_readable)  # parse into an int
+        chosen_supervisor = supervisors[grain_choice_as_int - 1]
+    except (ValueError, IndexError):
+        sys.stderr.write("Please enter a valid number (e.g. 1).\n")
+        sys.exit(1)
+
+    sys.stderr.write("OK. Chosen grain ID %s, whose child PID is %d. Attaching...\n" %
+                     (chosen_supervisor['grain_id'], chosen_supervisor['child_pid']))
+    pid = chosen_supervisor['child_pid']
+    tmp_vagrant_spk_dir = '/proc/{}/root/tmp/vagrant-spk'.format(pid)
+    enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
+    inject_enter_grain_into_grain(
+        sandstorm_dir,
+        chosen_supervisor['child_pid'],
+        desired_checksum,
+        enter_grain_binary,
+        tmp_vagrant_spk_dir,
+        enter_grain_binary_path,
+    )
+    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+        "cd /opt/app/.sandstorm",
+        "sudo {} {}".format(enter_grain_binary_path, pid),
+    ]))
+    sys.stderr.write(
+        "NOTE: You should discard all sandstorm-files.list changes from this session to avoid bloat!\n")
+
 def pack(args):
     output_spk = args.command_specific_args[0]
     print(output_spk)
@@ -807,12 +982,15 @@ def main():
     ]
 
     if ENABLE_EXPERIMENTAL:
-        operations.append(
+        operations.extend([
             Command('auto', auto,
-             "Automatically package the app in \n"
-             "  --work-directory (using the provided `stack` \n"
-             "  command arg. Also inits developer keys in \n"
-             "  ~/.sandstorm on this host. (EXPERIMENTAL)"))
+                    "Automatically package the app in \n"
+                    "  --work-directory (using the provided `stack` \n"
+                    "  command arg. Also inits developer keys in \n"
+                    "  ~/.sandstorm on this host. (EXPERIMENTAL)"),
+            Command('enter-grain', shell, "Get a shell within a grain"),
+        ])
+
 
     op_to_func = dict((c.name, c.func) for c in operations if c.func)
     ops_helptext = '\n'.join(c.name + ': ' + c.helptext for c in operations if not c.hidden)

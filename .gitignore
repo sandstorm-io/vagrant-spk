@@ -8,3 +8,4 @@ vagrant-spk.spec
 
 # The following file patterns are auto-created by editors like Emacs.
 .#*
+*~
