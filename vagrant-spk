@@ -947,7 +947,6 @@ def main():
         Command('dev', dev,
             "Make the current app available to Sandstorm \n"
             "  in dev mode (after bringing the Vagrant VM `up`)"),
-        Command('shell', shell, "Get a shell within a grain"),
         Command('pack', pack,
             "Pack the curent app into a \n"
             "  Sandstorm package."),
@@ -989,6 +988,7 @@ def main():
                     "  --work-directory (using the provided `stack` \n"
                     "  command arg. Also inits developer keys in \n"
                     "  ~/.sandstorm on this host. (EXPERIMENTAL)"),
+            Command('enter-grain', shell, "Get a shell within a grain"),
         ])
 
 
