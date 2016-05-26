@@ -114,7 +114,7 @@ fn get_envp(pidStrRef: &str) -> std::vec::Vec<*const u8> {
                         else { x.as_ptr() }
                         )).collect();
                     return all_environ_arguments;
-                }            
+                }
             }
         }
     };
@@ -130,11 +130,11 @@ fn main() {
     // let argv1: &[u8] = b"/usr/bin/sensors\x00";
     // let argv2: &[u8] = b"-h\x00";
     // let argv: &[int] = [                               // <-- store them in this
-    // ::core::intrinsics::transmute(argv1.as_ptr()), // <-- transmuting 
+    // ::core::intrinsics::transmute(argv1.as_ptr()), // <-- transmuting
     // ::core::intrinsics::transmute(argv2.as_ptr()),
     // 0                                              // <-- and NULL terminate
     // ];
-    // let envp: &[int] = [0];let target_environ 
+    // let envp: &[int] = [0];let target_environ
     write(1,
           ("Attaching to process ID ".to_string() + pidStrRef + &"...\n".to_string()).as_bytes());
     let userns_fd = open_as_fd_or_die(
