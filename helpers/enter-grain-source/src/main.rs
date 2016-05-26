@@ -94,7 +94,6 @@ fn get_envp(pidStrRef: &str) -> std::vec::Vec<*const u8> {
     // at the end, we can provide the environment.
 
     let path = "/proc/".to_string() + pidStrRef + &"/environ".to_string();
-    let mut envp: &[*const u8];
     let mut file = match File::open(&path) {
         Err(why) => panic!("couldn't open {}: {}", path, why),
         Ok(mut file) => {
