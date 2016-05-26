@@ -28,7 +28,7 @@ vendor/python.msi.installed: | vendor/python.msi
 	touch vendor/python.msi.installed
 
 state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe: | vendor/python.msi.installed vendor/pywin32.exe.installed
-	$(WINEARGS) $(WINE) 'c:/python27/python.exe' -m pip install pyinstaller
+	$(WINEARGS) $(WINE) 'c:/python27/python.exe' -m pip install pyinstaller==3.1.1
 
 vendor/pywin32.exe: | vendor
 	wget http://iweb.dl.sourceforge.net/project/pywin32/pywin32/Build%20219/pywin32-219.win32-py2.7.exe -O vendor/pywin32.exe

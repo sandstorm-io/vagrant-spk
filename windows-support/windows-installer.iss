@@ -41,6 +41,9 @@ Source: "dist\vagrant-spk.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; vagrant-spk platform stacks
 Source: "..\stacks\*"; DestDir: "{app}\stacks"; Flags: recursesubdirs
 
+; "helpers" - right now just the enter_grain binary and its sha1
+Source: "..\helpers\*"; DestDir: "{app}\helpers"; Flags: recursesubdirs
+
 ; ssh binary + required DLLs, so that `vagrant ssh` can work
 Source: "vendor\msysgit\ssh.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "vendor\msysgit\msys-crypto-1.0.0.dll"; DestDir: "{app}"; Flags: ignoreversion
