@@ -39,11 +39,7 @@ fn sanity_check_fd(fd: usize) {
     // For some reason, syscall!(OPEN) returns usize, but I need to check its output against
     // -1. So I'm going to just check if it's >255.
     if fd > 255 {
-        let exit_failure = 1usize;
-        write(1, ("Failed to open a needed file. Bailing.\n".as_bytes()));
-        unsafe {
-            syscall!(EXIT, exit_failure);
-        }
+        panic!("Failed to open a needed file. Bailing.");
     }
 }
 
@@ -89,17 +85,21 @@ fn execve_bash(envp: std::vec::Vec<*const u8>) {
     let bash_path = "/bin/bash\0".as_bytes();
     let nullargv = 0usize;
     unsafe {
-        syscall!(EXECVE, bash_path.as_ptr(), nullargv, envp.as_ptr());
+        // execve will not return at all in the case of success. In the case of failure it will
+        // return -1. I check it against 0, which is the typical UNIX/C idiom.
+        let retval = syscall!(EXECVE, bash_path.as_ptr(), nullargv, envp.as_ptr());
+        if retval != 0usize {
+            panic!("Failed to find and launch bash within the grain. Bailing out now.");
+        }
     }
 }
 
-fn get_envp(pidStrRef: &str) -> std::vec::Vec<*const u8> {
+fn get_envp(pid_str_ref: &str) -> std::vec::Vec<*const u8> {
     // Grab the environ from pid 1048 so that when we execve a shell
     // at the end, we can provide the environment.
 
-    let path = "/proc/".to_string() + pidStrRef + &"/environ".to_string();
-    let mut envp: &[*const u8];
-    let mut file = match File::open(&path) {
+    let path = "/proc/".to_string() + pid_str_ref + &"/environ".to_string();
+    match File::open(&path) {
         Err(why) => panic!("couldn't open {}: {}", path, why),
         Ok(mut file) => {
             let mut s = String::new();
@@ -114,43 +114,43 @@ fn get_envp(pidStrRef: &str) -> std::vec::Vec<*const u8> {
                         else { x.as_ptr() }
                         )).collect();
                     return all_environ_arguments;
-                }            
+                }
             }
         }
     };
 }
 
 fn main() {
-    let pidStrRef = &env::args().nth(1).expect("Panicking: expected argv to have 2 items.").to_string();
+    let pid_str_ref = &env::args().nth(1).expect("Panicking: expected argv to have 2 items.").to_string();
     // Grab the environ from pid 1048 so that when we execve a shell
     // at the end, we can provide the environment.
-    let result = get_envp(pidStrRef);
+    let result = get_envp(pid_str_ref);
 
     // let filename: &[u8] = b"/usr/bin/sensors\x00";     // <-- Make c strings like this
     // let argv1: &[u8] = b"/usr/bin/sensors\x00";
     // let argv2: &[u8] = b"-h\x00";
     // let argv: &[int] = [                               // <-- store them in this
-    // ::core::intrinsics::transmute(argv1.as_ptr()), // <-- transmuting 
+    // ::core::intrinsics::transmute(argv1.as_ptr()), // <-- transmuting
     // ::core::intrinsics::transmute(argv2.as_ptr()),
     // 0                                              // <-- and NULL terminate
     // ];
-    // let envp: &[int] = [0];let target_environ 
+    // let envp: &[int] = [0];let target_environ
     write(1,
-          ("Attaching to process ID ".to_string() + pidStrRef + &"...\n".to_string()).as_bytes());
+          ("Attaching to process ID ".to_string() + pid_str_ref + &"...\n".to_string()).as_bytes());
     let userns_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/user\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/user\0").as_bytes());
     let ipc_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/ipc\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/ipc\0").as_bytes());
     let uts_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/uts\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/uts\0").as_bytes());
     let net_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/net\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/net\0").as_bytes());
     let pid_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/pid\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/pid\0").as_bytes());
     let mnt_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/ns/mnt\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/ns/mnt\0").as_bytes());
     let cwd_fd = open_as_fd_or_die(
-        ("/proc/".to_string() + pidStrRef + "/cwd\0").as_bytes());
+        ("/proc/".to_string() + pid_str_ref + "/cwd\0").as_bytes());
     setgroups_zero();
     setns(userns_fd, 0x10000000usize); // CLONE_NEWUSER
     close(userns_fd);
@@ -165,13 +165,12 @@ fn main() {
     setns(mnt_fd, 0x00020000usize); // CLONE_NEWNS which I guess is mount namespaces
     close(mnt_fd);
     fchdir(cwd_fd);
-    close(9);
+    close(cwd_fd);
     // fork, and do a handful of things in the child before we execve bash.
     let fork_result = fork();
     if fork_result == 0 {
         // in the child
         setuid_setgid_1000();
-        write(1, "About to start shell...\n\0".as_bytes());
         execve_bash(result);
     } else {
         // in the parent

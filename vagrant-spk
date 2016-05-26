@@ -691,7 +691,7 @@ def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, ente
         # If not, then use dd to inject it in. dd is more convenient than cat here because dd opens
         # the file itself, so `sudo dd` can easily write to files that the "vagrant" user can't.
         'sudo dd of={} 2>/dev/null'.format(enter_grain_binary_path),
-        'sudo chmod 755 {}'.format(enter_grain_binary_path),        
+        'sudo chmod 755 {}'.format(enter_grain_binary_path),
         ])
     call_vagrant_ssh_command_providing_stdin(
         sandstorm_dir,
@@ -947,6 +947,7 @@ def main():
         Command('dev', dev,
             "Make the current app available to Sandstorm \n"
             "  in dev mode (after bringing the Vagrant VM `up`)"),
+        Command('enter-grain', shell, "Get a shell within a grain"),
         Command('pack', pack,
             "Pack the curent app into a \n"
             "  Sandstorm package."),
@@ -988,7 +989,6 @@ def main():
                     "  --work-directory (using the provided `stack` \n"
                     "  command arg. Also inits developer keys in \n"
                     "  ~/.sandstorm on this host. (EXPERIMENTAL)"),
-            Command('enter-grain', shell, "Get a shell within a grain"),
         ])
 
 
