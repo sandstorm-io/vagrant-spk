@@ -85,7 +85,12 @@ fn execve_bash(envp: std::vec::Vec<*const u8>) {
     let bash_path = "/bin/bash\0".as_bytes();
     let nullargv = 0usize;
     unsafe {
-        syscall!(EXECVE, bash_path.as_ptr(), nullargv, envp.as_ptr());
+        // execve will not return at all in the case of success. In the case of failure it will
+        // return -1. I check it against 0, which is the typical UNIX/C idiom.
+        let retval = syscall!(EXECVE, bash_path.as_ptr(), nullargv, envp.as_ptr());
+        if retval != 0usize {
+            panic!("Failed to find and launch bash within the grain. Bailing out now.");
+        }
     }
 }
 
@@ -166,7 +171,6 @@ fn main() {
     if fork_result == 0 {
         // in the child
         setuid_setgid_1000();
-        write(1, "About to start shell...\n\0".as_bytes());
         execve_bash(result);
     } else {
         // in the parent
