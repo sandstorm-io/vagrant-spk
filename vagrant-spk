@@ -691,7 +691,7 @@ def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, ente
         # If not, then use dd to inject it in. dd is more convenient than cat here because dd opens
         # the file itself, so `sudo dd` can easily write to files that the "vagrant" user can't.
         'sudo dd of={} 2>/dev/null'.format(enter_grain_binary_path),
-        'sudo chmod 755 {}'.format(enter_grain_binary_path),        
+        'sudo chmod 755 {}'.format(enter_grain_binary_path),
         ])
     call_vagrant_ssh_command_providing_stdin(
         sandstorm_dir,
