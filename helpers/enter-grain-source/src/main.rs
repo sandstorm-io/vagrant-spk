@@ -39,11 +39,7 @@ fn sanity_check_fd(fd: usize) {
     // For some reason, syscall!(OPEN) returns usize, but I need to check its output against
     // -1. So I'm going to just check if it's >255.
     if fd > 255 {
-        let exit_failure = 1usize;
-        write(1, ("Failed to open a needed file. Bailing.\n".as_bytes()));
-        unsafe {
-            syscall!(EXIT, exit_failure);
-        }
+        panic!("Failed to open a needed file. Bailing.");
     }
 }
 
