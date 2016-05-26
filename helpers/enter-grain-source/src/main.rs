@@ -160,7 +160,7 @@ fn main() {
     setns(mnt_fd, 0x00020000usize); // CLONE_NEWNS which I guess is mount namespaces
     close(mnt_fd);
     fchdir(cwd_fd);
-    close(9);
+    close(cwd_fd);
     // fork, and do a handful of things in the child before we execve bash.
     let fork_result = fork();
     if fork_result == 0 {
