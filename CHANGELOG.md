@@ -1,3 +1,11 @@
+### v0.164 (2016-05-27)
+- New features:
+    - Add "vagrant-spk enter-grain" so developers can get a shell within a running grain.
+      Thanks @zarvox for extensive review.
+- BUG FIXES:
+    - Update example to refer to `vm` where necessary. Thanks @pgrm.
+    - Update libvirt README to refer to `vm` where necessary. Thanks @techtonik.
+
 ### v0.161 (2016-05-02)
 - BUG FIX:
     - Fix typo in deprecation warning when running: `vagrant-spk global-status`.
