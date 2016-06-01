@@ -248,7 +248,9 @@ def check_dot_sandstorm():
 def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
                                               vagrant_ssh_command_string,
                                               assert_exit_success=True):
-    p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
+    argv = ['vagrant', 'ssh', '-c', vagrant_ssh_command_string]
+    print(argv)
+    p = subprocess.Popen(argv,
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE,
                          cwd=sandstorm_dir)
@@ -732,12 +734,16 @@ def shell(args):
     # vagrant is slow to start up, so we run both checks in the same vagrant
     # ssh invocation.
     #
-    # Also, for safety on Windows especially, we avoid using the " character within the string.
+    # For safety on Windows especially, and to make it easier to manually test this on Mac/Liniux
+    # via "vagrant ssh -c '...'", we avoid using any of these characters within the string:
+    #
+    # - apostrophe: '
+    # - quotation mark: "
     data_from_guest = call_vagrant_ssh_command_capturing_output(
         sandstorm_dir,
         r'''pidof spk || echo no-spk;''' +
-        r'''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; ''' +
-        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q 'Uid:.*'${SANDSTORM_UID} && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l '^PPid:\s*'${pid}'$' /proc/*/status | head -n1  | sed -r 's,/proc/(.*)/status,\1,') ; done'''
+        r'''SANDSTORM_UID=$(id sandstorm | sed -r s,[^0-9],_,g | sed -r s,_+,_,g | cut -d _ -f 2 ) ; ''' +
+        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q 'Uid:.*'${SANDSTORM_UID} && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l ^PPid:\\s*${pid}$ /proc/*/status | head -n1  | sed -r s,/proc/,,g | sed -r s,/status,,) ; done'''
         # get pid of supervisor, check process owner, get first child process
     )
     splitted = data_from_guest.splitlines()
