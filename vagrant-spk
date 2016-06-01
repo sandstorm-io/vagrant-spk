@@ -731,11 +731,13 @@ def shell(args):
     #
     # vagrant is slow to start up, so we run both checks in the same vagrant
     # ssh invocation.
+    #
+    # Also, for safety on Windows especially, we avoid using the " character within the string.
     data_from_guest = call_vagrant_ssh_command_capturing_output(
         sandstorm_dir,
         r'''pidof spk || echo no-spk;''' +
         r'''SANDSTORM_UID=$(id sandstorm | sed -r 's/.*uid=([0-9]*).*/\1/') ; ''' +
-        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q "Uid:.*$SANDSTORM_UID" && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l "^PPid:\s*$pid$" /proc/*/status | head -n1  | sed -r 's,/proc/(.*)/status,\1,') ; done'''
+        r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q 'Uid:.*'${SANDSTORM_UID} && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -l '^PPid:\s*'${pid}'$' /proc/*/status | head -n1  | sed -r 's,/proc/(.*)/status,\1,') ; done'''
         # get pid of supervisor, check process owner, get first child process
     )
     splitted = data_from_guest.splitlines()
@@ -757,7 +759,7 @@ def shell(args):
         try:
             supervisor_pid, ownership_check, grain_id, child_pid = line.split()
         except:
-            sys.stderr('Error parsing line: %s. Crashing.' % line)
+            sys.stderr.write('Error parsing line: %s. Crashing.' % line)
             raise
         if ownership_check == 'ownership-correct':
             supervisors.append({
