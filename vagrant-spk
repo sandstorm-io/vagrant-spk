@@ -709,7 +709,9 @@ def shell(args):
         # accidentally corrupted. If it is the empty string, ignore it; this way, we can avoid
         # checksum errors while developing the binary.
         with open(os.path.join(CODE_DIR, 'helpers', 'enter_grain.sha1'), 'rb') as fd:
-            desired_checksum = fd.read().strip()
+            # The first thing in the file, if you split by spaces, is a hex value. There may be
+            # other text after it, namely the filename that was checksummed.
+            desired_checksum = fd.read().split(' ')[0].strip()
         found_checksum = hashlib.sha1(enter_grain_binary).hexdigest()
         if (desired_checksum and (desired_checksum != found_checksum)):
             raise RuntimeError("ERROR: This vagrant-spk bundle seems to be corrupt: bad checksum on enter_grain binary.")
