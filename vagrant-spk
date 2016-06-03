@@ -735,8 +735,8 @@ def shell(args):
     # vagrant is slow to start up, so we run both checks in the same vagrant
     # ssh invocation.
     #
-    # For safety on Windows especially, and to make it easier to manually test this on Mac/Liniux
-    # via "vagrant ssh -c '...'", we avoid using any of these characters within the string:
+    # For safety on Windows especially, and to make it easier to manually test this on Mac/Linux via
+    # "vagrant ssh -c '...'", we avoid using any of these characters within the string:
     #
     # - apostrophe: '
     # - quotation mark: "
