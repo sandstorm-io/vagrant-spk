@@ -1,3 +1,9 @@
+### v0.165 (UNRELEASED)
+- BUG FIXES:
+  - `vagrant-spk enter-grain` was basically 100% broken in v0.164, with some extra breakage on
+     Windows. This release fixes that. Huge thanks to @ocdtrekkie for testing, to find the
+     bugs.
+
 ### v0.164 (2016-05-27)
 - New features:
     - Add "vagrant-spk enter-grain" so developers can get a shell within a running grain.
