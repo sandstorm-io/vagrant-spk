@@ -248,7 +248,8 @@ def check_dot_sandstorm():
 def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
                                               vagrant_ssh_command_string,
                                               assert_exit_success=True):
-    p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
+    argv = ['vagrant', 'ssh', '-c', vagrant_ssh_command_string]
+    p = subprocess.Popen(argv,
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE,
                          cwd=sandstorm_dir)
