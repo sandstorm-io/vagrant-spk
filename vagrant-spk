@@ -760,7 +760,7 @@ def shell(args):
         try:
             supervisor_pid, ownership_check, grain_id, child_pid = line.split()
         except:
-            sys.stderr('Error parsing line: %s. Crashing.' % line)
+            sys.stderr.write('Error parsing line: %s. Crashing.' % line)
             raise
         if ownership_check == 'ownership-correct':
             supervisors.append({
