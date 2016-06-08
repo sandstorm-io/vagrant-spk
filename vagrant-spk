@@ -130,8 +130,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.name = VM_NAME
     vb.customize ["modifyvm", :id, "--nictype1", "Am79C973"]
 
+    # /opt/app and /host-dot-sandstorm are used by vagrant-spk
     override.vm.synced_folder "..", "/opt/app"
     override.vm.synced_folder ENV["HOME"] + "/.sandstorm", "/host-dot-sandstorm"
+    # /vagrant is not used by vagrant-spk; we need this line so it gets disabled; if we removed the
+    # line, vagrant would automatically insert a synced folder in /vagrant, which is not what we want.
     override.vm.synced_folder "..", "/vagrant", disabled: true
   end
   config.vm.provider :libvirt do |libvirt, override|
@@ -139,8 +142,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     libvirt.memory = assign_ram_mb
     libvirt.default_prefix = VM_NAME
 
+    # /opt/app and /host-dot-sandstorm are used by vagrant-spk
     override.vm.synced_folder "..", "/opt/app", type: "9p", accessmode: "passthrough"
     override.vm.synced_folder ENV["HOME"] + "/.sandstorm", "/host-dot-sandstorm", type: "9p", accessmode: "passthrough"
+    # /vagrant is not used by vagrant-spk; we need this line so it gets disabled; if we removed the
+    # line, vagrant would automatically insert a synced folder in /vagrant, which is not what we want.
     override.vm.synced_folder "..", "/vagrant", type: "9p", accessmode: "passthrough", disabled: true
   end
 end
