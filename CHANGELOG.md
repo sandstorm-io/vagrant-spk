@@ -1,4 +1,4 @@
-### v0.165 (UNRELEASED)
+### v0.165 (2016-06-07)
 - BUG FIXES:
   - `vagrant-spk enter-grain` was basically 100% broken in v0.164, with some extra breakage on
      Windows. This release fixes that. Huge thanks to @ocdtrekkie for testing, to find the
