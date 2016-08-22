@@ -1,3 +1,6 @@
+#![feature(alloc_system)]
+extern crate alloc_system;
+
 // use std::env;
 use std::fs::File;
 use std::io::Read;

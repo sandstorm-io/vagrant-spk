@@ -5,3 +5,7 @@ authors = ["Asheesh Laroia"]
 
 [dependencies]
 syscall = "0.2.1"
+
+[profile.release]
+opt-level = 3
+lto = true
