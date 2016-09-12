@@ -11,7 +11,7 @@ apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-pyth
 # patch mysql conf to not change uid, and to use /var/tmp over /tmp
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
-        --expression='s/^tmpdir\t\t= \/tmp/tmpdir\t\t= \/var\/tmp/' \
+        --expression='s,^tmpdir\t\t= /tmp,tmpdir\t\t= /var/tmp,' \
         /etc/mysql/my.cnf
 # patch mysql conf to use smaller transaction logs to save disk space
 cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
