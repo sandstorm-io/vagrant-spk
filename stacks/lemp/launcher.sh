@@ -11,6 +11,8 @@ mkdir -p /var/log/nginx
 # TODO someday: I'd prefer a tmpfs for these.
 rm -rf /var/run
 mkdir -p /var/run
+rm -rf /var/tmp
+mkdir -p /var/tmp
 mkdir -p /var/run/mysqld
 
 # Ensure mysql tables created
