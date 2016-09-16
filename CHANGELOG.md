@@ -1,3 +1,12 @@
+### v0.185 (2016-09-16)
+
+- BUG FIX:
+  - All stacks embedding MySQL now use `/var/tmp` for temporary storage. Thanks
+    @FiloSottile for reporting a Piwik issue that enabled us to notice this problem
+    and fix it for all future packages. Note that newly-created apps in these platform
+    stacks (`lemp`, `uwsgi`) will clear the `/var/tmp` directory every time the grain
+    starts.
+
 ### v0.165 (2016-06-07)
 - BUG FIXES:
   - `vagrant-spk enter-grain` was basically 100% broken in v0.164, with some extra breakage on
