@@ -1,4 +1,4 @@
-### v0.186 (2016-09-16)
+### v0.186 (2016-09-21)
 
 - BUG FIX:
   - All stacks embedding MySQL now use `/var/tmp` for temporary storage. Thanks
