@@ -14,13 +14,13 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "Installing the NodeSource Node.js 4.x repo..."
+echo "Installing the NodeSource Node.js 6.x repo..."
 
 apt-get update
 apt-get install -qq apt-transport-https
 
-echo 'deb https://deb.nodesource.com/node_4.x jessie main' > /etc/apt/sources.list.d/nodesource.list
-echo 'deb-src https://deb.nodesource.com/node_4.x jessie main' >> /etc/apt/sources.list.d/nodesource.list
+echo 'deb https://deb.nodesource.com/node_6.x jessie main' > /etc/apt/sources.list.d/nodesource.list
+echo 'deb-src https://deb.nodesource.com/node_6.x jessie main' >> /etc/apt/sources.list.d/nodesource.list
 
 # Add nodesource's apt gpg key inline
 echo "
