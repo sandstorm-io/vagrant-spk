@@ -291,7 +291,10 @@ def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
     command.extend(command_args)
     sys.stderr.write("Calling {} in {}\n".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
-    return subprocess.check_call(command, cwd=sandstorm_dir)
+    try:
+        return subprocess.check_call(command, cwd=sandstorm_dir)
+    except subprocess.CalledProcessError:
+        pass
 
 def ensure_working_vboxsf_in_base_box(sandstorm_dir):
     # If the .sandstorm/Vagrantfile refers to debian/jessie64, and does not pin it to a particular
