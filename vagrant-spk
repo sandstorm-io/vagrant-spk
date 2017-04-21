@@ -646,10 +646,6 @@ def setup_vm(args):
     with open(stack_path, "w") as f:
         f.write(stack_plugin_name + "\n")
 
-def deprecated_bring_up_vm(args):
-    warn_deprecated("up")
-    bring_up_vm(args)
-
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
@@ -856,41 +852,6 @@ def publish(args):
     finally:
         os.remove(temp_spk)
 
-def warn_deprecated(command_name):
-    ANSI_RED = "\x1b[31m"
-    ANSI_RESET = "\x1b[0m"
-    message = "\n".join([
-      ANSI_RED + "WARNING: `vagrant-spk {0}` is deprecated and will be removed on August 1, 2016.".format(command_name),
-      "Prefer `vagrant-spk vm {0}`.".format(command_name),
-      ANSI_RESET + "For more information, see https://groups.google.com/forum/#!topic/sandstorm-dev/cuSNJ3IsP6I",
-      ""
-    ])
-    sys.stderr.write(message)
-
-def deprecated_halt(args):
-    warn_deprecated("halt")
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "halt")
-
-def deprecated_do_reload(args):
-    warn_deprecated("reload")
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "reload")
-
-def deprecated_destroy(args):
-    warn_deprecated("destroy")
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "destroy", "--force")
-
-def deprecated_global_status(args):
-    warn_deprecated("global-status")
-    return subprocess.check_call(["vagrant", "global-status"])
-
-def deprecated_ssh(args):
-    warn_deprecated("ssh")
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh")
-
 def keygen(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     call_vagrant_command(sandstorm_dir, "ssh", "-c",
@@ -978,24 +939,6 @@ def main():
         Command('getkey', getkey,
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
-
-        # Below here are deprecated functions that we don't want to show in the help,
-        # but which we still need to dispatch until August 1, 2016.
-        Command('up', deprecated_bring_up_vm,
-            "(deprecated, use 'vagrant-spk vm halt') Start the Vagrant VM\n"
-            "  (and build the VM image if necessary).", hidden=True),
-        Command('reload', deprecated_do_reload,
-            "(deprecated, use 'vagrant-spk vm reload') Reboot the virtual machine, turning it off then on."),
-        Command('halt', deprecated_halt,
-            "(deprecated, use 'vagrant-spk vm halt') Shut down the Vagrant VM.", hidden=True),
-        Command('destroy', deprecated_destroy,
-            "(deprecated, use 'vagrant-spk vm destroy') Delete the Vagrant VM (but leave \n"
-            "  --work-directory untouched).", hidden=True),
-        Command('global-status', deprecated_global_status,
-            "(deprecated, use 'vagrant-spk vm global-status') Show the state of all active \n"
-            "  Vagrant VMs on this host.", hidden=True),
-        Command('ssh', deprecated_ssh,
-            "(deprecated, use 'vagrant-spk vm ssh') SSH into the Vagrant VM.", hidden=True),
     ]
 
     if ENABLE_EXPERIMENTAL:
