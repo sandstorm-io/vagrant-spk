@@ -1,0 +1,1 @@
+exec /opt/app/app
