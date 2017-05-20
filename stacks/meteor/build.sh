@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Make meteor bundle
 
-METEOR_WAREHOUSE_DIR="${METEOR_WAREHOUSE_DIR:-$HOME/.meteor}"
+METEOR_WAREHOUSE_DIR="${METEOR_WAREHOUSE_DIR:-/home/vagrant/.meteor}"
 METEOR_DEV_BUNDLE=$(dirname $(readlink -f "$METEOR_WAREHOUSE_DIR/meteor"))/dev_bundle
 
 cd /opt/app
