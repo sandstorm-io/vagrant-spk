@@ -2,7 +2,7 @@
 
 `vagrant-spk` is a tool designed to help app developers package apps for [Sandstorm](https://sandstorm.io).
 
-See also https://github.com/sandstorm-io/sandstorm/wiki/Porting-an-app-with-vagrant-spk for more details.
+See also https://docs.sandstorm.io/en/latest/vagrant-spk/design/ for more details.
 
 ## Example usage:
 
