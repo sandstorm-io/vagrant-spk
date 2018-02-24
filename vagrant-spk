@@ -60,7 +60,7 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Base on the Sandstorm snapshots of the official Debian 8 (jessie) box.
-  config.vm.box = "sandstorm/debian-jessie64"
+  config.vm.box = "debian/contrib-jessie64"
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
     # vagrant-vbguest is a Vagrant plugin that upgrades
@@ -176,6 +176,9 @@ set -euo pipefail
 CURL_OPTS="--silent --show-error"
 echo localhost > /etc/hostname
 hostname localhost
+
+# Install curl that is needed below.
+apt-get install -y curl
 
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
 # output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
