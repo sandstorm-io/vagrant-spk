@@ -58,9 +58,13 @@ VM_NAME = File.basename(File.dirname(File.dirname(__FILE__))) + "_sandstorm_#{Ti
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
+# ugly hack to prevent hashicorp's bitrot. See https://github.com/hashicorp/vagrant/issues/9442
+Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Base on the Sandstorm snapshots of the official Debian 8 (jessie) box.
-  config.vm.box = "sandstorm/debian-jessie64"
+  config.vm.box = "debian/contrib-stretch64"
+  config.vm.box_version = "9.3.0"
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
     # vagrant-vbguest is a Vagrant plugin that upgrades
@@ -176,6 +180,9 @@ set -euo pipefail
 CURL_OPTS="--silent --show-error"
 echo localhost > /etc/hostname
 hostname localhost
+
+# Install curl that is needed below.
+apt-get install -y curl
 
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
 # output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
