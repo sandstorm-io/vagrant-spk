@@ -7,29 +7,29 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y nginx php5-fpm php5-mysql php5-cli php5-curl git php5-dev mysql-server
+apt-get install -y nginx php7.0-fpm php7.0-mysql php7.0-cli php7.0-curl git php7.0-dev mysql-server
 service nginx stop
-service php5-fpm stop
+service php7.0-fpm stop
 service mysql stop
 systemctl disable nginx
-systemctl disable php5-fpm
+systemctl disable php7.0-fpm
 systemctl disable mysql
-# patch /etc/php5/fpm/pool.d/www.conf to not change uid/gid to www-data
+# patch /etc/php/7.0/fpm/pool.d/www.conf to not change uid/gid to www-data
 sed --in-place='' \
         --expression='s/^listen.owner = www-data/;listen.owner = www-data/' \
         --expression='s/^listen.group = www-data/;listen.group = www-data/' \
         --expression='s/^user = www-data/;user = www-data/' \
         --expression='s/^group = www-data/;group = www-data/' \
-        /etc/php5/fpm/pool.d/www.conf
-# patch /etc/php5/fpm/php-fpm.conf to not have a pidfile
+        /etc/php/7.0/fpm/pool.d/www.conf
+# patch /etc/php/7.0/fpm/php-fpm.conf to not have a pidfile
 sed --in-place='' \
         --expression='s/^pid =/;pid =/' \
-        /etc/php5/fpm/php-fpm.conf
-# patch /etc/php5/fpm/pool.d/www.conf to no clear environment variables
+        /etc/php/7.0/fpm/php-fpm.conf
+# patch /etc/php/7.0/fpm/pool.d/www.conf to no clear environment variables
 # so we can pass in SANDSTORM=1 to apps
 sed --in-place='' \
         --expression='s/^;clear_env = no/clear_env=no/' \
-        /etc/php5/fpm/pool.d/www.conf
+        /etc/php/7.0/fpm/pool.d/www.conf
 # patch mysql conf to not change uid, and to use /var/tmp over /tmp
 # for secure-file-priv see https://github.com/sandstorm-io/vagrant-spk/issues/195
 sed --in-place='' \
