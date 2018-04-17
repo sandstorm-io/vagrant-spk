@@ -182,6 +182,7 @@ echo localhost > /etc/hostname
 hostname localhost
 
 # Install curl that is needed below.
+apt-get update
 apt-get install -y curl
 
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
