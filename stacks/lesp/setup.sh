@@ -23,6 +23,10 @@ sed --in-place='' \
 sed --in-place='' \
         --expression='s/^pid =/;pid =/' \
         /etc/php/7.0/fpm/php-fpm.conf
+# patch /etc/php/7.0/fpm/php-fpm.conf to place the sock file in /var
+sed --in-place='' \
+       --expression='s/^listen = \/run\/php\/php7.0-fpm.sock/listen = \/var\/run\/php\/php7.0-fpm.sock/' \
+       /etc/php/7.0/fpm/pool.d/www.conf
 # patch /etc/php/7.0/fpm/pool.d/www.conf to no clear environment variables
 # so we can pass in SANDSTORM=1 to apps
 sed --in-place='' \

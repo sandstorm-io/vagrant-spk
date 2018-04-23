@@ -8,7 +8,7 @@ mkdir -p /var/log/nginx
 # Wipe /var/run, since pidfiles and socket files from previous launches should go away
 # TODO someday: I'd prefer a tmpfs for these.
 rm -rf /var/run
-mkdir -p /var/run
+mkdir -p /var/run/php
 
 # Spawn php
 /usr/sbin/php-fpm7.0 --nodaemonize --fpm-config /etc/php/7.0/fpm/php-fpm.conf &
