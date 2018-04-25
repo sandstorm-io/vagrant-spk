@@ -6,6 +6,11 @@
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
+
+echo -e "deb http://repo.mysql.com/apt/debian/ stretch mysql-5.7\ndeb-src http://repo.mysql.com/apt/debian/ stretch mysql-5.7" > /etc/apt/sources.list.d/mysql.list
+wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql
+apt-key add /tmp/RPM-GPG-KEY-mysql
+
 apt-get update
 apt-get install -y nginx php7.0-fpm php7.0-mysql php7.0-cli php7.0-curl git php7.0-dev mysql-server
 service nginx stop
@@ -25,6 +30,10 @@ sed --in-place='' \
 sed --in-place='' \
         --expression='s/^pid =/;pid =/' \
         /etc/php/7.0/fpm/php-fpm.conf
+# patch /etc/php/7.0/fpm/php-fpm.conf to place the sock file in /var 
+sed --in-place='' \
+       --expression='s/^listen = \/run\/php\/php7.0-fpm.sock/listen = \/var\/run\/php\/php7.0-fpm.sock/' \
+        /etc/php/7.0/fpm/pool.d/www.conf
 # patch /etc/php/7.0/fpm/pool.d/www.conf to no clear environment variables
 # so we can pass in SANDSTORM=1 to apps
 sed --in-place='' \
