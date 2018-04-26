@@ -21,7 +21,7 @@ mkdir -p /var/run/mysqld
 HOME=/etc/mysql /usr/sbin/mysqld --initialize
 
 # Spawn mysqld, php
-HOME=/etc/mysql /usr/sbin/mysqld &
+HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 /usr/sbin/php-fpm7.0 --nodaemonize --fpm-config /etc/php/7.0/fpm/php-fpm.conf &
 # Wait until mysql and php have bound their sockets, indicating readiness
 while [ ! -e /var/run/mysqld/mysqld.sock ] ; do
