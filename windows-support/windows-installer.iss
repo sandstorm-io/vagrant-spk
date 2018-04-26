@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "vagrant-spk"
-#define MyAppVersion "2015-07-24"
+#define MyAppVersion "v0.233"
 #define MyAppPublisher "Sandstorm Development Group, Inc."
 #define MyAppURL "https://docs.sandstorm.io/"
 #define MyAppExeName "vagrant-spk.exe"
