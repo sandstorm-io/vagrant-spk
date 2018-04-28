@@ -22,6 +22,9 @@
 
 from __future__ import print_function
 
+# TODO(someday): Increment version number and commit as part of release.sh
+__version__ = "v0.233"
+
 import argparse
 import os
 import glob
@@ -970,6 +973,7 @@ def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0], formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("command", choices=[c.name for c in operations], help=ops_helptext)
     parser.add_argument("command_specific_args", nargs="*")
+    parser.add_argument("-V", "--version", action="version", version="vagrant-spk "+__version__)
     parser.add_argument(
         "--work-directory",
         action='store',
