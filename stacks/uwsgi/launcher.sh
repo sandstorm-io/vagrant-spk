@@ -17,10 +17,11 @@ mkdir -p /var/run/mysqld
 UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
 
 # Ensure mysql tables created
-HOME=/etc/mysql /usr/bin/mysql_install_db --force
+# HOME=/etc/mysql /usr/bin/mysql_install_db
+HOME=/etc/mysql /usr/sbin/mysqld --initialize
 
 # Spawn mysqld
-HOME=/etc/mysql /usr/sbin/mysqld &
+HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 
 MYSQL_SOCKET_FILE=/var/run/mysqld/mysqld.sock
 # Wait for mysql to bind its socket
