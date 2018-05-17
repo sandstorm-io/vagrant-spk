@@ -7,7 +7,7 @@ See also https://docs.sandstorm.io/en/latest/vagrant-spk/design/ for more detail
 ## Example usage:
 
     git clone git://github.com/sandstorm-io/vagrant-spk
-    git clone git://github.com/paulproteus/php-app-to-package-for-sandstorm
+    git clone git://github.com/sandstorm-io/php-app-to-package-for-sandstorm
     export PATH=$(pwd)/vagrant-spk:$PATH
     cd php-app-to-package-for-sandstorm
     vagrant-spk setupvm lemp
