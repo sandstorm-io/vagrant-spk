@@ -2,6 +2,7 @@
 set -euo pipefail
 # something something folders
 mkdir -p /var/lib/mysql
+mkdir -p /var/lib/mysql-files
 mkdir -p /var/lib/nginx
 mkdir -p /var/log
 mkdir -p /var/log/mysql
