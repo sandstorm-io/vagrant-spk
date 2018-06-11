@@ -881,6 +881,14 @@ def keygen(args):
                 )
             )
 
+def listkeys(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    call_vagrant_command(sandstorm_dir, "ssh", "-c",
+            "spk listkeys --keyring=/host-dot-sandstorm/sandstorm-keyring {}".format(
+                " ".join(args.command_specific_args)
+                )
+            )
+
 def getkey(args):
     key_id = args.command_specific_args[0]
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -957,6 +965,8 @@ def main():
         Command('keygen', keygen,
             "Generate a new key, add it to your keyring,\n"
             "  and print the identifier."),
+        Command('listkeys', listkeys,
+            "List the keys in your keyring."),
         Command('getkey', getkey,
             "Given a key identifier, retrieve and print the\n"
             "  corresponding private key from your keyring."),
