@@ -1,10 +1,16 @@
+### v0.236 (2018-07-08)
+- Updated multiple stacks for compatibility with Debian stretch.
+- Added `listkeys` command to show which app keys are in your keyring.
+- Added ability to check vagrant-spk version with `--version`.
+- Fix bug where `curl` cannot be downloaded.
+- Fix bug caused by Vagrant version 2.0.3 and later.
+
 ### v0.230 (2018-03-17)
 - Now using Debian Contrib base image rather than a custom image.
 - Fixed various bitrot.
 - Other fixes, see git history.
 
 ### v0.186 (2016-09-21)
-
 - BUG FIX:
   - All stacks embedding MySQL now use `/var/tmp` for temporary storage. Thanks
     @FiloSottile for reporting a Piwik issue that enabled us to notice this problem
