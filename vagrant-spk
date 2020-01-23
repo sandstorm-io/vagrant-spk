@@ -241,6 +241,9 @@ set -euo pipefail
 exit 0
 """
 
+# Where to look for the vagrant-spk dir from inside the vm
+TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
+
 def format_shell_grain_choices(supervisors):
     '''Return a formatted message based on the list of supervisor PIDs that were found, asking which
     grain the user wants to attach a shell to.'''
@@ -702,8 +705,8 @@ def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, ente
     ### The purpose of this function is to take a PID, which is presumably the root process of a
     ### grain within the vagrant-spk VM, and make sure that /tmp/vagrant-spk/enter_grain is the
     ### binary that we want. If is isn't, then inject it.
-    sys.stderr.write("Adding enter_grain program to the grain in /tmp/vagrant-spk/enter-grain...\n")
-    tmp_vagrant_spk_dir = '/proc/{}/root/tmp/vagrant-spk'.format(pid)
+    tmp_vagrant_spk_dir = '/proc/{}/root{}'.format(pid, TMP_VAGRANT_SPK_LOCATION)
+    sys.stderr.write("Adding enter_grain program to the grain in {}/enter-grain...\n".format(TMP_VAGRANT_SPK_LOCATION))
     enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
     commands = ' && '.join([
         # Make sure /tmp/vagrant-spk exists in the VM.
@@ -811,7 +814,7 @@ def shell(args):
     sys.stderr.write("OK. Chosen grain ID %s, whose child PID is %d. Attaching...\n" %
                      (chosen_supervisor['grain_id'], chosen_supervisor['child_pid']))
     pid = chosen_supervisor['child_pid']
-    tmp_vagrant_spk_dir = '/proc/{}/root/tmp/vagrant-spk'.format(pid)
+    tmp_vagrant_spk_dir = '/proc/{}/root{}'.format(pid, TMP_VAGRANT_SPK_LOCATION)
     enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
     inject_enter_grain_into_grain(
         sandstorm_dir,
