@@ -9,17 +9,17 @@ set -euo pipefail
 # Discussion, issues and change requests at:
 #   https://github.com/nodesource/distributions
 #
-# Script to install the NodeSource Node.js 10.x repo onto a
+# Script to install the NodeSource Node.js 6.x repo onto a
 # Debian or Ubuntu system.
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "Installing the NodeSource Node.js 10.x repo..."
+echo "Installing the NodeSource Node.js 6.x repo..."
 
 apt-get update
 apt-get install -qq apt-transport-https
 
-curl -sL https://deb.nodesource.com/setup_10.x | bash -
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
 
 # Actually install node
 apt-get install -qq nodejs git-core g++
