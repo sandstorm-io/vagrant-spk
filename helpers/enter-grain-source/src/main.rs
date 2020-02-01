@@ -1,8 +1,6 @@
-#![feature(alloc_system)]
-extern crate alloc_system;
-
 // use std::env;
-use std::fs::File;
+use std::fs::{File, metadata};
+use std::os::unix::fs::MetadataExt;
 use std::io::Read;
 use std::ptr;
 use std::env;
@@ -74,13 +72,12 @@ fn wait_all_children() {
     }
 }
 
-fn setuid_setgid_1000() {
-    // These are the right UID & GID because they are what Sandstorm
-    // uses inside the user namespace.
-    let one_thousand = 1000usize;
+fn setuid_setgid() {
+    let meta = metadata("/var").unwrap();
+
     unsafe {
-        syscall!(SETUID, one_thousand);
-        syscall!(SETGID, one_thousand);
+        syscall!(SETUID, meta.uid());
+        syscall!(SETGID, meta.gid());
     }
 }
 
@@ -173,7 +170,7 @@ fn main() {
     let fork_result = fork();
     if fork_result == 0 {
         // in the child
-        setuid_setgid_1000();
+        setuid_setgid();
         execve_bash(result);
     } else {
         // in the parent
