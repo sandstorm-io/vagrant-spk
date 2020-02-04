@@ -670,6 +670,19 @@ def setup_vm(args):
     with open(stack_path, "w") as f:
         f.write(stack_plugin_name + "\n")
 
+def upgrade_vm(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    print("Upgrading VM parameters in {}".format(sandstorm_dir))
+    # Copy global setup script to e.g. install and configure sandstorm
+    global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
+    with open(global_setup_script_path, "wb") as f:
+        f.write(GLOBAL_SETUP_SCRIPT)
+    os.chmod(global_setup_script_path, 0o755)
+    # Copy in Vagrantfile
+    vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
+    with open(vagrantfile_path, "w") as f:
+        f.write(VAGRANTFILE_CONTENTS)
+
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
@@ -944,6 +957,9 @@ def main():
             "  --work-directory (using the provided `stack` \n"
             "  command arg).  Also inits developer keys in \n"
             "  ~/.sandstorm on this host."),
+        Command('upgradevm', upgrade_vm,
+            "Upgrade the Vagrant VM and setup scripts to \n"
+            "  latest version included in vagrant-spk."),
         Command('vm', vm_subcommand,
             "Pass through all subsequent arguments to `vagrant` run in `.sandstorm`."),
         Command('vm up', None, "Start the Vagrant VM (and build the VM image if needed)"),
