@@ -323,51 +323,29 @@ def call_vagrant_command(sandstorm_dir, *command_args):
         sys.exit(ANSI_RED + msg + ANSI_RESET)
 
 def ensure_working_vboxsf_in_base_box(sandstorm_dir):
-    # If the .sandstorm/Vagrantfile refers to debian/jessie64, and does not pin it to a particular
-    # version, and the user has version 8.2.2 available on their system, then we abort the
-    # "vagrant-spk up" process because it will not work.
+    # If the .sandstorm/Vagrantfile refers to debian/jessie64 or sandstorm/debian-jessie64
+    # then we abort the "vagrant-spk up" process because it will not work.
     def test_vagrantfile_refers_to_jessie64():
         with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
             for line in fd:
                 if line.strip().split() == 'config.vm.box = "debian/jessie64"'.split():
                     return True
+                if line.strip().split() == 'config.vm.box = "sandstorm/debian-jessie64"'.split():
+                    return True
         return False
     vagrantfile_refers_to_jessie64 = test_vagrantfile_refers_to_jessie64()
 
-    def test_vagrantfile_pins_version():
-        with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
-            for line in fd:
-                if line.strip().startswith('config.vm.box_version'):
-                    return True
-        return False
-    vagrantfile_pins_version = test_vagrantfile_pins_version()
-
-    def get_vagrant_dot_d_path():
-        if os.environ.get('VAGRANT_HOME'):
-            return os.environ.get('VAGRANT_HOME')
-        homedir = (os.environ.get('USERPROFILE') or os.environ.get('HOME'))
-        return os.path.join(homedir, '.vagrant.d')
-    user_has_version_822 = (os.path.exists(
-        os.path.join(get_vagrant_dot_d_path(), 'boxes/debian-VAGRANTSLASH-jessie64/8.2.2')))
-
-    if (vagrantfile_refers_to_jessie64 and
-            (not vagrantfile_pins_version) and
-            user_has_version_822):
+    if vagrantfile_refers_to_jessie64:
         msg = (
             """*** INCOMPATIBLE OPTIONS DETECTED ***
 
-You need to adjust .sandstorm/Vagrantfile due to recent incompatible changes
-made by a project we depend on. Apologies for this mess.
+This package was set to use a VM no longer compatible with vagrant-spk. You
+can either upgrade to the latest VM supported by vagrant-spk by running
+"vagrant-spk upgradevm" or manually update the package to use a compatible
+release of Debian Jessie.
 
-Here's how to fix it:
-
-Open .sandstorm/Vagrantfile and find this line:
-
-  config.vm.box = "debian/jessie64"
-
-Change it to:
-
-  config.vm.box = "sandstorm/debian-jessie64"
+To do this, open .sandstorm/Vagrantfile and find the line beginning with
+"config.vm.box" and change the selected box to debian/contrib-jessie64
 
 For details (including how to bypass this warning) read:
 https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.137
