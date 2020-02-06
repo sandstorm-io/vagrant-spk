@@ -53,6 +53,8 @@ CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
+
 # Guess at a reasonable name for the VM based on the folder vagrant-spk is
 # run from.  The timestamp is there to avoid conflicts if you have multiple
 # folders with the same name.
@@ -179,6 +181,9 @@ GITIGNORE_CONTENTS = r"""
 
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
+
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
+# App-specific setup should be done in the setup.sh file.
 
 # Set options for curl. Since we only want to show errors from these curl commands, we also use
 # 'cat' to buffer the output; for more information:
