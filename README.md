@@ -13,13 +13,13 @@
     vagrant-spk init
     # edit .sandstorm/sandstorm-pkgdef.capnp in your editor of choice
     vagrant-spk dev
-    # visit http://local.sandstorm.io:6080 in a web browser
+    # visit http://local.sandstorm.io:6090 in a web browser
     # log in as Alice, the admin account
     # launch an instance of the example app, play around with it
     # then, press Ctrl-C to stop the tracing vagrant-spk dev
     vagrant-spk pack example.spk
     # You now have an .spk file.  Yay!
-    # Verify it works by going to http://local.sandstorm.io:6080,
+    # Verify it works by going to http://local.sandstorm.io:6090,
     # select "My Files" -> "Upload an app", select your .spk file,
     # upload it, install it, and create a new instance of your app.
 
