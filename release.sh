@@ -34,34 +34,17 @@ function assert_git_state_is_clean() {
 }
 
 function get_release_name() {
-  # We use the current Sandstorm release number as vagrant-spk release number for simplicity. This
-  # does mean it might be hard to hae two vagrant-spk releases in a short time period.
-  #
-  # As for what these version numbers *mean* and how this gets calculated, see the sandstorm
-  # repository's release.sh.
-  local CHANNEL=dev
+  BUILD_MAJOR = 1
+  BUILD_MINOR = 0
+  BUILD_PATCH = 0
 
-  echo "**** Determining next build number for $CHANNEL channel ****"
-
-  local LAST_BUILD=$(curl -fs https://install.sandstorm.io/$CHANNEL)
-
-  # Import the BRANCH_NUMBER from the sandstorm git repo.
-  . ../sandstorm/branch.conf
-
-  if (( LAST_BUILD / 1000 > BRANCH_NUMBER )); then
-    echo "ERROR: $CHANNEL has already moved past this branch!" >&2
-    echo "  I refuse to replace it with an older branch." >&2
-    exit 1
+  # DISPLAY_VERSION gets used in the git tag description
+  DISPLAY_VERSION="${BUILD_MAJOR}.${BUILD_MINOR}"
+  if (( BUILD_PATCH > 0 )); then
+    DISPLAY_VERSION="${BUILD_MAJOR}.${BUILD_MINOR}.${BUILD_PATCH}"
   fi
 
-  local BASE_BUILD=$(( BRANCH_NUMBER * 1000 ))
-  local BUILD=$(( BASE_BUILD > LAST_BUILD ? BASE_BUILD : LAST_BUILD ))
-  local BUILD_MINOR="$(( $BUILD % 1000 ))"
-
-  # DISPLAY_VERSION gets used in the git tag description, so we make it global.
-  DISPLAY_VERSION="${BRANCH_NUMBER}.${BUILD_MINOR}"
-
-  # TAG_NAME gets used as the git tag name, so we make it global.
+  # TAG_NAME gets used as the git tag name
   TAG_NAME="v${DISPLAY_VERSION}"
 }
 
