@@ -51,6 +51,26 @@ function assert_changelog_present() {
   fi
 }
 
+function assert_version_updated() {
+  # Verify that the vagrant-spk version has been updated.
+  EXPECTED_SCRIPT_VERSION="__version__ = \"$TAG_NAME\""
+  if [ "$(head -n 26 vagrant-spk | tail -n 1)" != "$EXPECTED_SCRIPT_VERSION" ]; then
+    echo "vagrant-spk version not updated. 26th line should be:" >&2
+    echo "$EXPECTED_SCRIPT_VERSION" >&2
+    exit 1
+  fi
+}
+
+function assert_winstall_updated() {
+  # Verify that the Windows installer version has been updated.
+  EXPECTED_WINSTALL_VERSION="#define MyAppVersion \"$TAG_NAME\""
+  if [ "$(head -n 5 windows-support/windows-installer.iss | tail -n 1)" != "$EXPECTED_WINSTALL_VERSION" ]; then
+    echo "Windows installer version not updated. 5th line should be:" >&2
+    echo "$EXPECTED_WINSTALL_VERSION" >&2
+    exit 1
+  fi
+}
+
 function build_windows_exe() {
   # The Windows EXE filename is always vagrant-spk-setup.exe locally, and when we upload it to
   # GitHub as a release artifact, we rename it to use $TAG_NAME in the filename to indicate the
@@ -101,6 +121,8 @@ function main() {
   assert_git_state_is_clean
   get_release_name
   assert_changelog_present
+  assert_version_updated
+  assert_winstall_updated
   build_windows_exe
   tag_and_push
   create_github_release
