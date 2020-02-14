@@ -53,6 +53,8 @@ CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 VAGRANTFILE_CONTENTS = r"""# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
+
 # Guess at a reasonable name for the VM based on the folder vagrant-spk is
 # run from.  The timestamp is there to avoid conflicts if you have multiple
 # folders with the same name.
@@ -175,6 +177,9 @@ GITIGNORE_CONTENTS = r"""
 
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
+
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
+# App-specific setup should be done in the setup.sh file.
 
 # Set options for curl. Since we only want to show errors from these curl commands, we also use
 # 'cat' to buffer the output; for more information:
@@ -314,51 +319,29 @@ def call_vagrant_command(sandstorm_dir, *command_args):
         sys.exit(ANSI_RED + msg + ANSI_RESET)
 
 def ensure_working_vboxsf_in_base_box(sandstorm_dir):
-    # If the .sandstorm/Vagrantfile refers to debian/jessie64, and does not pin it to a particular
-    # version, and the user has version 8.2.2 available on their system, then we abort the
-    # "vagrant-spk up" process because it will not work.
+    # If the .sandstorm/Vagrantfile refers to debian/jessie64 or sandstorm/debian-jessie64
+    # then we abort the "vagrant-spk up" process because it will not work.
     def test_vagrantfile_refers_to_jessie64():
         with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
             for line in fd:
                 if line.strip().split() == 'config.vm.box = "debian/jessie64"'.split():
                     return True
+                if line.strip().split() == 'config.vm.box = "sandstorm/debian-jessie64"'.split():
+                    return True
         return False
     vagrantfile_refers_to_jessie64 = test_vagrantfile_refers_to_jessie64()
 
-    def test_vagrantfile_pins_version():
-        with open(os.path.join(sandstorm_dir, 'Vagrantfile'), 'r') as fd:
-            for line in fd:
-                if line.strip().startswith('config.vm.box_version'):
-                    return True
-        return False
-    vagrantfile_pins_version = test_vagrantfile_pins_version()
-
-    def get_vagrant_dot_d_path():
-        if os.environ.get('VAGRANT_HOME'):
-            return os.environ.get('VAGRANT_HOME')
-        homedir = (os.environ.get('USERPROFILE') or os.environ.get('HOME'))
-        return os.path.join(homedir, '.vagrant.d')
-    user_has_version_822 = (os.path.exists(
-        os.path.join(get_vagrant_dot_d_path(), 'boxes/debian-VAGRANTSLASH-jessie64/8.2.2')))
-
-    if (vagrantfile_refers_to_jessie64 and
-            (not vagrantfile_pins_version) and
-            user_has_version_822):
+    if vagrantfile_refers_to_jessie64:
         msg = (
             """*** INCOMPATIBLE OPTIONS DETECTED ***
 
-You need to adjust .sandstorm/Vagrantfile due to recent incompatible changes
-made by a project we depend on. Apologies for this mess.
+This package was set to use a VM no longer compatible with vagrant-spk. You
+can either upgrade to the latest VM supported by vagrant-spk by running
+"vagrant-spk upgradevm" or manually update the package to use a compatible
+release of Debian Jessie.
 
-Here's how to fix it:
-
-Open .sandstorm/Vagrantfile and find this line:
-
-  config.vm.box = "debian/jessie64"
-
-Change it to:
-
-  config.vm.box = "sandstorm/debian-jessie64"
+To do this, open .sandstorm/Vagrantfile and find the line beginning with
+"config.vm.box" and change the selected box to debian/contrib-jessie64
 
 For details (including how to bypass this warning) read:
 https://github.com/sandstorm-io/vagrant-spk/releases/tag/v0.137
@@ -666,6 +649,19 @@ def setup_vm(args):
     with open(stack_path, "w") as f:
         f.write(stack_plugin_name + "\n")
 
+def upgrade_vm(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    print("Upgrading VM parameters in {}".format(sandstorm_dir))
+    # Copy global setup script to e.g. install and configure sandstorm
+    global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
+    with open(global_setup_script_path, "wb") as f:
+        f.write(GLOBAL_SETUP_SCRIPT)
+    os.chmod(global_setup_script_path, 0o755)
+    # Copy in Vagrantfile
+    vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
+    with open(vagrantfile_path, "w") as f:
+        f.write(VAGRANTFILE_CONTENTS)
+
 def bring_up_vm(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     # Make sure ~/.sandstorm exists, since global-setup.sh uses
@@ -940,6 +936,9 @@ def main():
             "  --work-directory (using the provided `stack` \n"
             "  command arg).  Also inits developer keys in \n"
             "  ~/.sandstorm on this host."),
+        Command('upgradevm', upgrade_vm,
+            "Upgrade the Vagrant VM and setup scripts to \n"
+            "  latest version included in vagrant-spk."),
         Command('vm', vm_subcommand,
             "Pass through all subsequent arguments to `vagrant` run in `.sandstorm`."),
         Command('vm up', None, "Start the Vagrant VM (and build the VM image if needed)"),
