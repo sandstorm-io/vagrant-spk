@@ -34,15 +34,8 @@ function assert_git_state_is_clean() {
 }
 
 function get_release_name() {
-  BUILD_MAJOR = 1
-  BUILD_MINOR = 0
-  BUILD_PATCH = 0
-
   # DISPLAY_VERSION gets used in the git tag description
-  DISPLAY_VERSION="${BUILD_MAJOR}.${BUILD_MINOR}"
-  if (( BUILD_PATCH > 0 )); then
-    DISPLAY_VERSION="${BUILD_MAJOR}.${BUILD_MINOR}.${BUILD_PATCH}"
-  fi
+  DISPLAY_VERSION='1.0'
 
   # TAG_NAME gets used as the git tag name
   TAG_NAME="v${DISPLAY_VERSION}"
