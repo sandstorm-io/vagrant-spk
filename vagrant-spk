@@ -82,10 +82,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.guest = "debian"
   end
 
-  # We forward port 6080, the Sandstorm web port, so that developers can
-  # visit their sandstorm app from their browser as local.sandstorm.io:6080
-  # (aka 127.0.0.1:6080).
-  config.vm.network :forwarded_port, guest: 6080, host: 6080, host_ip: "127.0.0.1"
+  # We forward port 6090, the vagrant-spk web port, so that developers can
+  # visit their Sandstorm app from their browser as local.sandstorm.io:6090
+  # (aka 127.0.0.1:6090).
+  config.vm.network :forwarded_port, guest: 6090, host: 6090, host_ip: "127.0.0.1"
 
   # Use a shell script to "provision" the box. This installs Sandstorm using
   # the bundled installer.
@@ -202,7 +202,7 @@ if [[ ! -f /host-dot-sandstorm/caches/$SANDSTORM_PACKAGE ]] ; then
 fi
 if [ ! -e /opt/sandstorm/latest/sandstorm ] ; then
     echo -n "Installing Sandstorm version ${SANDSTORM_CURRENT_VERSION}..."
-    bash /host-dot-sandstorm/caches/install.sh -d -e "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE" >/dev/null
+    bash /host-dot-sandstorm/caches/install.sh -d -e -p 6090 "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE" >/dev/null
     echo "...done."
 fi
 modprobe ip_tables
@@ -571,11 +571,11 @@ def auto(args):
     pack(args)
     args.command_specific_args = []
 
-    # Success. Bring down the VM for now, since otherwise port 6080
+    # Success. Bring down the VM for now, since otherwise port 6090
     # will be in use.
     print('')
     print('You can run:')
-    print('$ vagrant-spk halt')
+    print('$ vagrant-spk vm halt')
     print('')
     print('When you are ready to stop thinking about packaging this app.')
 
