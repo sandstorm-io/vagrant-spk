@@ -1,3 +1,11 @@
+### v1.0 (2020-02-16)
+- Changed vagrant-spk's preferred port to 6090 to avoid conflicting with Sandstorm.
+- Added `upgradevm` command to upgrade to latest compatible VM.
+- Updated Node stack to Node 10, and fixed legacy Node 6 stack. (Thanks @curbengh)
+- Fixed detection of VM configurations that do not work with vagrant-spk.
+- Fixed bugs preventing `enter-grain` from working. (Thanks @abliss and @zenhack)
+- Fixed bug causing VM to allocate too little RAM on Windows.
+
 ### v0.236 (2018-07-08)
 - Updated multiple stacks for compatibility with Debian stretch.
 - Added `listkeys` command to show which app keys are in your keyring.
