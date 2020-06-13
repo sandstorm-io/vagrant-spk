@@ -841,7 +841,7 @@ def pack(args):
         "spk verify --details /home/vagrant/sandstorm-package.spk",
         "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
     ]))
-    os.rename("sandstorm-package.spk", output_spk)
+    shutil.move("sandstorm-package.spk", output_spk)
     print("package produced at {}".format(output_spk))
 
 def verify(args):
