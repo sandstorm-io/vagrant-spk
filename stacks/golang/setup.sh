@@ -5,15 +5,18 @@
 
 set -euo pipefail
 
-# The version of golang in the main repo is *ancient* (1.3.x); let's get
-# ourselves a newer version:
+version=1.15
+os=linux
+arch=amd64
 
-echo 'deb http://httpredir.debian.org/debian/ stretch-backports main' >> \
-	/etc/apt/sources.list.d/backports.list
-apt-get update
-apt-get -t stretch-backports install -y golang
+# The version of golang in the debian repositories tends to be incredibly
+# out of date; let's get ourselves a newer version from upstream:
+curl -L https://golang.org/dl/go${version}.${os}-${arch}.tar.gz -o go.tar.gz
+tar -C /usr/local -xzf go.tar.gz
+rm go.tar.gz
+echo 'export PATH=/usr/local/go/bin:$PATH' > /etc/profile.d/go.sh
 
-# Needed for fetching most dependencies:
+# Needed for fetching go libraries:
 apt-get install -y git
 
 exit 0
