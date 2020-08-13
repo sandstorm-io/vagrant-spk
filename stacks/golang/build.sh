@@ -7,6 +7,8 @@ if [ ! -e go.mod ]; then
 	printf "vagrant-spk's golang stack does not support older GOPATH\n"
 	printf "based projects. Try running:\n" >&2
 	printf "\n" >&2
+	printf "    vagrant-spk vm ssh\n" >&2
+	printf "    cd /opt/app\n" >&2
 	printf "    go mod init example.com/mypkg\n" >&2
 	exit 1
 fi
