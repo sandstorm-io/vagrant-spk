@@ -8,7 +8,7 @@ function assert_github_token_and_release_tool_present() {
   export | grep -q GITHUB_TOKEN= || (echo "Aiee, you should set a GITHUB_TOKEN environment variable." ; exit 1)
 
   echo "**** Checking path for GitHub release tool. ****"
-  which github-release >/dev/null || (echo "Aiee, you need a github-release tool in the PATH."; exit 1)
+  which gh >/dev/null || (echo "Aiee, you need a gh tool in the PATH."; exit 1)
 }
 
 function assert_git_state_is_clean() {
@@ -91,8 +91,7 @@ function create_github_release() {
     echo "Not creating GitHub release yet. Re-run with DRY_RUN=no in the environment."
     echo ""
   else
-    github-release release --draft --tag "$TAG_NAME" -u sandstorm-io -r vagrant-spk -d "$(python -c 's = open("CHANGELOG.md").read(); print s[:s.index("\n### ")-1]')"
-    github-release upload -u sandstorm-io -r vagrant-spk -t "$TAG_NAME" -n "vagrant-spk-setup-$TAG_NAME.exe" --file "$WINDOWS_EXE"
+    gh release create "$TAG_NAME" "$WINDOWS_EXE" -d -R sandstorm-io/vagrant-spk -n "$(python -c 's = open("CHANGELOG.md").read(); print s[:s.index("\n### ")-1]')"
   fi
 }
 
