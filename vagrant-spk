@@ -600,7 +600,7 @@ def setup_vm(args):
     # Copy global setup script to e.g. install and configure sandstorm
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
     with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT)
+        f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
     os.chmod(global_setup_script_path, 0o755)
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
@@ -626,7 +626,7 @@ def setup_vm(args):
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("launcher.sh")) as g:
-            f.write(g.read())
+            f.write(g.read().encode("UTF-8"))
     os.chmod(launcher_script_path, 0o755)
 
     # Copy in Vagrantfile
@@ -641,12 +641,12 @@ def setup_vm(args):
     # Copy in a .gitignore file. See https://github.com/sandstorm-io/vagrant-spk/issues/30
     gitignore_path = os.path.join(sandstorm_dir, ".gitignore")
     with open(gitignore_path, "ab") as f:
-        f.write(GITIGNORE_CONTENTS)
+        f.write(GITIGNORE_CONTENTS.encode("UTF-8"))
 
     # Copy in a .gitattributes file. See https://github.com/sandstorm-io/vagrant-spk/issues/55
     gitattributes_path = os.path.join(sandstorm_dir, ".gitattributes")
     with open(gitattributes_path, "ab") as f:
-        f.write(GITATTRIBUTES_CONTENTS)
+        f.write(GITATTRIBUTES_CONTENTS.encode("UTF-8"))
 
     if os.path.exists(source_service_config_dir):
         if os.path.exists(target_service_config_dir):
