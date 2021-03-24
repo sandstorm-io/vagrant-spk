@@ -22,14 +22,14 @@ HOME=/etc/mysql /usr/sbin/mysqld --initialize
 
 # Spawn mysqld, php
 HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
-/usr/sbin/php-fpm7.0 --nodaemonize --fpm-config /etc/php/7.0/fpm/php-fpm.conf &
+/usr/sbin/php-fpm7.3 --nodaemonize --fpm-config /etc/php/7.3/fpm/php-fpm.conf &
 # Wait until mysql and php have bound their sockets, indicating readiness
 while [ ! -e /var/run/mysqld/mysqld.sock ] ; do
     echo "waiting for mysql to be available at /var/run/mysqld/mysqld.sock"
     sleep .2
 done
-while [ ! -e /var/run/php/php7.0-fpm.sock ] ; do
-    echo "waiting for php-fpm7.0 to be available at /var/run/php/php7.0-fpm.sock"
+while [ ! -e /var/run/php/php7.3-fpm.sock ] ; do
+    echo "waiting for php-fpm7.3 to be available at /var/run/php/php7.3-fpm.sock"
     sleep .2
 done
 

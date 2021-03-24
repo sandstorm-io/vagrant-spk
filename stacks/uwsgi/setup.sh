@@ -7,7 +7,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo -e "deb http://repo.mysql.com/apt/debian/ stretch mysql-5.7\ndeb-src http://repo.mysql.com/apt/debian/ stretch mysql-5.7" > /etc/apt/sources.list.d/mysql.list
+echo -e "deb http://repo.mysql.com/apt/debian/ buster mysql-5.7\ndeb-src http://repo.mysql.com/apt/debian/ buster mysql-5.7" > /etc/apt/sources.list.d/mysql.list
 wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql
 apt-key add /tmp/RPM-GPG-KEY-mysql
 
