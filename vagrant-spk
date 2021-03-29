@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 #   Copyright 2015-2018 Sandstorm Development Group, Inc. and contributors
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -738,7 +738,7 @@ def shell(args):
         with open(os.path.join(CODE_DIR, 'helpers', 'enter_grain.sha1'), 'rb') as fd:
             # The first thing in the file, if you split by spaces, is a hex value. There may be
             # other text after it, namely the filename that was checksummed.
-            desired_checksum = fd.read().split(' ')[0].strip()
+            desired_checksum = fd.read().decode('utf-8').split(' ')[0].strip()
         found_checksum = hashlib.sha1(enter_grain_binary).hexdigest()
         if (desired_checksum and (desired_checksum != found_checksum)):
             raise RuntimeError("ERROR: This vagrant-spk bundle seems to be corrupt: bad checksum on enter_grain binary.")
@@ -775,7 +775,7 @@ def shell(args):
         r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q 'Uid:.*'${SANDSTORM_UID} && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -E -l ^PPid:[[:blank:]]*${pid}$ /proc/*/status | head -n1  | sed -r s,/proc/,,g | sed -r s,/status,,) ; done'''
         # get pid of supervisor, check process owner, get first child process
     )
-    splitted = data_from_guest.splitlines()
+    splitted = data_from_guest.decode('utf-8').splitlines()
     spk_pid = splitted[0]
     if spk_pid == 'no-spk':
         sys.stderr.write("No Sandstorm supervisor processes found.\n" +
@@ -802,7 +802,7 @@ def shell(args):
                 'grain_id': grain_id,
                 'child_pid': int(child_pid),
             })
-    grain_choice_human_readable = raw_input(format_shell_grain_choices(supervisors)).strip()
+    grain_choice_human_readable = input(format_shell_grain_choices(supervisors)).strip()
     if not grain_choice_human_readable:
         grain_choice_human_readable = "1"  # by default
     try:
