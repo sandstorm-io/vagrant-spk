@@ -35,8 +35,7 @@ function assert_git_state_is_clean() {
 
 function get_release_name() {
   # TAG_NAME gets used as the git tag name
-  TAG_NAME="$(./vagrant-spk --version)"
-  TAG_NAME="${TAG_NAME:12}"
+  TAG_NAME="$(./vagrant-spk --version | awk '{print $2}')"
 
   # DISPLAY_VERSION gets used in the git tag description
   DISPLAY_VERSION="${TAG_NAME:1}"
