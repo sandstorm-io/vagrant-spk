@@ -775,7 +775,7 @@ def shell(args):
         r'''for pid in $(pidof supervisor); do echo $pid $(cat /proc/$pid/status | grep -q 'Uid:.*'${SANDSTORM_UID} && echo ownership-correct || echo ownership-wrong) $(xargs -0 -n1 echo < /proc/$pid/cmdline  | grep -v -- - | head -n2 | tail -n1) $(grep -E -l ^PPid:[[:blank:]]*${pid}$ /proc/*/status | head -n1  | sed -r s,/proc/,,g | sed -r s,/status,,) ; done'''
         # get pid of supervisor, check process owner, get first child process
     )
-    splitted = data_from_guest.splitlines()
+    splitted = data_from_guest.decode('utf-8').splitlines()
     spk_pid = splitted[0]
     if spk_pid == 'no-spk':
         sys.stderr.write("No Sandstorm supervisor processes found.\n" +
