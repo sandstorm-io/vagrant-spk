@@ -1,5 +1,16 @@
 #!/bin/bash
+
 set -euo pipefail
+
+wait_for() {
+    local service=$1
+    local file=$2
+    while [ ! -e "$file" ] ; do
+        echo "waiting for $service to be available at $file."
+        sleep .1
+    done
+}
+
 # something something folders
 mkdir -p /var/lib/mysql
 mkdir -p /var/lib/mysql-files
@@ -26,10 +37,7 @@ HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 
 MYSQL_SOCKET_FILE=/var/run/mysqld/mysqld.sock
 # Wait for mysql to bind its socket
-while [ ! -e $MYSQL_SOCKET_FILE ] ; do
-    echo "waiting for mysql to be available at $MYSQL_SOCKET_FILE"
-    sleep .2
-done
+wait_for mysql $MYSQL_SOCKET_FILE
 
 # Spawn uwsgi
 HOME=/var uwsgi \
@@ -39,10 +47,7 @@ HOME=/var uwsgi \
         --wsgi-file /opt/app/main.py &
 
 # Wait for uwsgi to bind its socket
-while [ ! -e $UWSGI_SOCKET_FILE ] ; do
-    echo "waiting for uwsgi to be available at $UWSGI_SOCKET_FILE"
-    sleep .2
-done
+wait_for uwsgi $UWSGI_SOCKET_FILE
 
 # Start nginx.
 /usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"

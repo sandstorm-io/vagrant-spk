@@ -1,5 +1,16 @@
 #!/bin/bash
 
+set -euo pipefail
+
+wait_for() {
+    local service=$1
+    local file=$2
+    while [ ! -e "$file" ] ; do
+        echo "waiting for $service to be available at $file."
+        sleep .1
+    done
+}
+
 # Create a bunch of folders under the clean /var that php, nginx, and mysql expect to exist
 mkdir -p /var/lib/mysql
 mkdir -p /var/lib/mysql-files
@@ -24,14 +35,8 @@ HOME=/etc/mysql /usr/sbin/mysqld --initialize
 HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 /usr/sbin/php-fpm7.3 --nodaemonize --fpm-config /etc/php/7.3/fpm/php-fpm.conf &
 # Wait until mysql and php have bound their sockets, indicating readiness
-while [ ! -e /var/run/mysqld/mysqld.sock ] ; do
-    echo "waiting for mysql to be available at /var/run/mysqld/mysqld.sock"
-    sleep .2
-done
-while [ ! -e /var/run/php/php7.3-fpm.sock ] ; do
-    echo "waiting for php-fpm7.3 to be available at /var/run/php/php7.3-fpm.sock"
-    sleep .2
-done
+wait_for mysql /var/run/mysqld/mysqld.sock
+wait_for php-fpm7.3 /var/run/php/php7.3-fpm.sock
 
 # Start nginx.
 /usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"

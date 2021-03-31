@@ -1,5 +1,16 @@
 #!/bin/bash
 
+set -euo pipefail
+
+wait_for() {
+    local service=$1
+    local file=$2
+    while [ ! -e "$file" ] ; do
+        echo "waiting for $service to be available at $file."
+        sleep .1
+    done
+}
+
 # Create a bunch of folders under the clean /var that php and nginx expect to exist
 mkdir -p /var/lib/nginx
 mkdir -p /var/lib/php/sessions
@@ -13,10 +24,7 @@ mkdir -p /var/run/php
 # Spawn php
 /usr/sbin/php-fpm7.3 --nodaemonize --fpm-config /etc/php/7.3/fpm/php-fpm.conf &
 # Wait until php has bound its socket, indicating readiness
-while [ ! -e /var/run/php/php7.3-fpm.sock ] ; do
-    echo "waiting for php-fpm7.3 to be available at /var/run/php/php7.3-fpm.sock"
-    sleep .2
-done
+wait_for php-fpm7.3 /var/run/php/php7.3-fpm.sock
 
 # Start nginx.
 /usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"
