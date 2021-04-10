@@ -10,7 +10,7 @@ distclean:
 	rm -rf state build vendor dist ../build ../dist vagrant-spk.spec
 
 wine: /usr/bin/wine
-	sudo apt-get install wine:i386
+	sudo apt-get install wine=5.0-3ubuntu1
 
 vendor:
 	mkdir -p vendor
@@ -54,7 +54,7 @@ dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.ex
 	# Some WINE installs are seemingly 64-bit but install InnoSetup to Program Files, not
 	# Program Files (x86). We work around this with a symlink.
 	if [ ! -d 'state/wineprefix/drive_c/Program Files (x86)' ] ; then ln -s 'Program Files' 'state/wineprefix/drive_c/Program Files (x86)' ; fi
-	$(WINEARGS) $(WINE) 'c:/program files (x86)/inno setup 5/iscc.exe' windows-installer.iss
+	$(WINEARGS) $(WINE) 'c:/program files (x86)/inno setup 6/iscc.exe' windows-installer.iss
 
 vendor/msysgit.7z:
 	wget https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20150319/PortableGit-1.9.5-preview20150319.7z -O vendor/msysgit.7z
