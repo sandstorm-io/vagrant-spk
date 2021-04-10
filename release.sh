@@ -92,7 +92,7 @@ function create_github_release() {
     echo ""
   else
     mv "$WINDOWS_EXE" "vagrant-spk-setup-$TAG_NAME.exe"
-    gh release create "$TAG_NAME" "vagrant-spk-setup-$TAG_NAME.exe" -d -R sandstorm-io/vagrant-spk -n "$(python -c 's = open("CHANGELOG.md").read(); print s[:s.index("\n### ")-1]')"
+    gh release create "$TAG_NAME" "vagrant-spk-setup-$TAG_NAME.exe" -d -R sandstorm-io/vagrant-spk -n "$(python3 -c 's = open("CHANGELOG.md").read(); print (s[:s.index("\n### ")-1])')"
   fi
 }
 
