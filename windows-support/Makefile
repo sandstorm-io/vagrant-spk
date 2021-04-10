@@ -18,30 +18,21 @@ vendor:
 state:
 	mkdir -p state
 
-vendor/python.msi: | vendor state/wineprefix
-	wget https://www.python.org/ftp/python/2.7.10/python-2.7.10.msi -O vendor/python.msi
-	touch vendor/python.msi
+vendor/python.exe: | vendor state/wineprefix
+	wget https://www.python.org/ftp/python/3.6.1/python-3.6.1.exe -O vendor/python.exe
+	touch vendor/python.exe
 
-vendor/python.msi.installed: | vendor/python.msi
-	cp vendor/python.msi vendor/python-tmp.msi
-	$(WINEARGS) $(WINE) msiexec /i vendor/python-tmp.msi /qn
-	touch vendor/python.msi.installed
+vendor/python.exe.installed: | vendor/python.exe
+	cp vendor/python.exe vendor/python-tmp.exe
+	$(WINEARGS) $(WINE) vendor/python-tmp.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+	touch vendor/python.exe.installed
 
-state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe: | vendor/python.msi.installed vendor/pywin32.exe.installed
-	$(WINEARGS) $(WINE) 'c:/python27/python.exe' -m pip install pyinstaller==3.1.1
+state/pyinstaller.installed: | vendor/python.exe.installed
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python36-32/python.exe' -m pip install pyinstaller==3.4
+	touch state/pyinstaller.installed
 
-vendor/pywin32.exe: | vendor
-	wget http://iweb.dl.sourceforge.net/project/pywin32/pywin32/Build%20219/pywin32-219.win32-py2.7.exe -O vendor/pywin32.exe
-
-vendor/pywin32.exe.installed: | vendor/pywin32.exe
-	unzip vendor/pywin32.exe || true
-	mv PLATLIB/* SCRIPTS/* state/wineprefix/drive_c/Python27/Lib/site-packages/
-	rmdir PLATLIB SCRIPTS
-	$(WINEARGS) $(WINE) 'c:/python27/python.exe' state/wineprefix/drive_c/Python27/Lib/site-packages/pywin32_postinstall.py -install
-	touch vendor/pywin32.exe.installed
-
-dist/vagrant-spk.exe: ../vagrant-spk | state/wineprefix/drive_c/Python27/Scripts/pyinstaller.exe
-	$(WINEARGS) $(WINE) c:/python27/Scripts/pyinstaller -F ../vagrant-spk
+dist/vagrant-spk.exe: ../vagrant-spk | state/pyinstaller.installed
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python36-32/Scripts/pyinstaller' -F ../vagrant-spk
 
 vendor/innosetup.exe: | vendor
 	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
@@ -50,7 +41,10 @@ vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 	$(WINEARGS) $(WINE) vendor/innosetup.exe /VERYSILENT
 	touch vendor/innosetup.exe.installed
 
-dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.exe.installed vendor/msysgit.7z vendor/msysgit/bin
+state/version.iss: ../vagrant-spk
+	../vagrant-spk --version | sed -e 's,vagrant-spk ,,' | xargs printf '#define MyAppVersion "%s"\n' > state/version.iss
+
+dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.exe.installed vendor/msysgit.7z vendor/msysgit/bin state/version.iss
 	# Some WINE installs are seemingly 64-bit but install InnoSetup to Program Files, not
 	# Program Files (x86). We work around this with a symlink.
 	if [ ! -d 'state/wineprefix/drive_c/Program Files (x86)' ] ; then ln -s 'Program Files' 'state/wineprefix/drive_c/Program Files (x86)' ; fi
