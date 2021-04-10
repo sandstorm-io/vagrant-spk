@@ -1,3 +1,12 @@
+### v1.1 (2021-04-10)
+- Upgraded vagrant-spk to Python 3.x. (Thanks @troyjfarrell)
+- Upgraded base image to Debian Buster.
+- Displays URL of test URL in the CLI. (Thanks @zdb999)
+- Blocks client-side third party content by default.
+- Fix edge case in packing spk to a different volume. (Thanks @zenhack)
+- Various stack upgrades and improvements. (Thanks @zenhack)
+- Cleaned up release process significantly. (Thanks @paulproteus and @zenhack)
+
 ### v1.0 (2020-02-16)
 - Changed vagrant-spk's preferred port to 6090 to avoid conflicting with Sandstorm.
 - Added `upgradevm` command to upgrade to latest compatible VM.
