@@ -1,0 +1,17 @@
+name: release
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: confirm version
+        run: |
+          ./vagrant-spk --version
+      - name: release script
+        run: |
+          export DRY_RUN=yes
+          export GITHUB_TOKEN=test
+          bash ./release.sh
