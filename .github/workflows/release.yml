@@ -12,6 +12,7 @@ jobs:
           ./vagrant-spk --version
       - name: release script
         run: |
+          export SKIP_GIT_CLEAN_CHECK=yes
           export DRY_RUN=yes
           export GITHUB_TOKEN=test
           bash ./release.sh
