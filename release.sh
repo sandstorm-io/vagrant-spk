@@ -60,7 +60,7 @@ function build_windows_exe() {
   # The Windows EXE filename is always vagrant-spk-setup.exe locally, and when we upload it to
   # GitHub as a release artifact, we rename it to use $TAG_NAME in the filename to indicate the
   # version.
-  WINDOWS_EXE=windows-support/dist/innosetup/vagrant-spk-setup.exe
+  WINDOWS_EXE_PATH=windows-support/dist/innosetup
 
   echo "**** Building Windows EXE ****"
   (cd windows-support && make)
@@ -96,8 +96,8 @@ function create_github_release() {
     echo "Not creating GitHub release yet. Re-run with DRY_RUN=no in the environment."
     echo ""
   else
-    mv "$WINDOWS_EXE" "vagrant-spk-setup-$TAG_NAME.exe"
-    gh release create "$TAG_NAME" "vagrant-spk-setup-$TAG_NAME.exe" -d -R sandstorm-io/vagrant-spk -n "$(python3 -c 's = open("CHANGELOG.md").read(); print (s[:s.index("\n### ")-1])')"
+    mv "$WINDOWS_EXE_PATH/vagrant-spk-setup.exe" "$WINDOWS_EXE_PATH/vagrant-spk-setup-$TAG_NAME.exe"
+    gh release create "$TAG_NAME" "$WINDOWS_EXE_PATH/vagrant-spk-setup-$TAG_NAME.exe" -d -R sandstorm-io/vagrant-spk -n "$(python3 -c 's = open("CHANGELOG.md").read(); print (s[:s.index("\n### ")-1])')"
   fi
 }
 
