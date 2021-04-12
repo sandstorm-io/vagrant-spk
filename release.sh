@@ -42,6 +42,11 @@ function get_release_name() {
 }
 
 function assert_changelog_present() {
+  if [[ "${SKIP_CHANGELOG_CHECK:-no}" == "yes" ]]; then
+    echo "Skipping changelog check due to SKIP_CHANGELOG_CHECK=yes in environment."
+    return
+  fi
+
   # Verify that the changelog has been updated.
   EXPECTED_CHANGELOG="### $TAG_NAME ($(date '+%Y-%m-%d'))"
   if [ "$(head -n 1 CHANGELOG.md)" != "$EXPECTED_CHANGELOG" ]; then
