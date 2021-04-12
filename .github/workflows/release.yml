@@ -5,6 +5,11 @@ on: [push]
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SKIP_CHANGELOG_CHECK: yes
+        SKIP_GIT_CLEAN_CHECK: yes
+        DRY_RUN: yes
     steps:
       - uses: actions/checkout@v2
       - name: confirm version
@@ -12,7 +17,4 @@ jobs:
           ./vagrant-spk --version
       - name: release script
         run: |
-          export SKIP_GIT_CLEAN_CHECK=yes
-          export DRY_RUN=yes
-          export GITHUB_TOKEN=test
           bash ./release.sh
