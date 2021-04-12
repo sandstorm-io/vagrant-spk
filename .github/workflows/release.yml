@@ -17,4 +17,5 @@ jobs:
           ./vagrant-spk --version
       - name: release script
         run: |
+          sudo apt-get install wine=5.0-3ubuntu1 p7zip-full
           bash ./release.sh
