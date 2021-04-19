@@ -1,3 +1,7 @@
+### v1.1.1 (2021-04-19)
+- Updated Windows build to Python 3.8.9.
+- No longer includes ssh.exe in Windows release.
+
 ### v1.1 (2021-04-10)
 - Upgraded vagrant-spk to Python 3.x. (Thanks @troyjfarrell)
 - Upgraded base image to Debian Buster.
