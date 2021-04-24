@@ -19,7 +19,7 @@ state:
 	mkdir -p state
 
 vendor/python.exe: | vendor state/wineprefix
-	wget https://www.python.org/ftp/python/3.8.9/python-3.8.9.exe -O vendor/python.exe
+	wget https://www.python.org/ftp/python/3.9.4/python-3.9.4.exe -O vendor/python.exe
 	touch vendor/python.exe
 
 vendor/python.exe.installed: | vendor/python.exe
@@ -28,11 +28,11 @@ vendor/python.exe.installed: | vendor/python.exe
 	touch vendor/python.exe.installed
 
 state/pyinstaller.installed: | vendor/python.exe.installed
-	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python38-32/python.exe' -m pip install pyinstaller
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python39-32/python.exe' -m pip install pyinstaller
 	touch state/pyinstaller.installed
 
 dist/vagrant-spk.exe: ../vagrant-spk | state/pyinstaller.installed
-	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python38-32/Scripts/pyinstaller' -F ../vagrant-spk
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python39-32/Scripts/pyinstaller' -F ../vagrant-spk
 
 vendor/innosetup.exe: | vendor
 	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
@@ -51,10 +51,10 @@ dist/innosetup/vagrant-spk-setup.exe: dist/vagrant-spk.exe | vendor/innosetup.ex
 	$(WINEARGS) $(WINE) 'c:/program files (x86)/inno setup 6/iscc.exe' windows-installer.iss
 
 state/regdata: | state
-	printf '[HKEY_CURRENT_USER\\Software\\Wine\\WineDbg]\n"ShowCrashDialog"=dword:00000000\n' > state/regdata
+	printf 'Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\Software\\Wine\\WineDbg]\n"ShowCrashDialog"=dword:00000000\n\n[HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion]\n"CurrentVersion"="10.0"\n\n' > state/regdata
 
 state/wineprefix: state/regdata
 	mkdir -p state/wineprefix
 	$(WINEARGS) $(WINE) wineboot
-	$(WINEARGS) $(WINE) regedit state/regdata
+	$(WINEARGS) $(WINE) regedit /S state/regdata
 	touch state/wineprefix
