@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-version=1.17
+version=1.17.1
 os=linux
 arch=amd64
 
