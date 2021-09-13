@@ -664,7 +664,7 @@ def upgrade_vm(args):
     # Copy global setup script to e.g. install and configure sandstorm
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
     with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT)
+        f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
     os.chmod(global_setup_script_path, 0o755)
     # Copy in Vagrantfile
     vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
