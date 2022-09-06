@@ -13,7 +13,7 @@ wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
 apt-key add /tmp/RPM-GPG-KEY-mysql
 
 apt-get update
-apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python build-essential python-dev python-virtualenv git
+apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python3 build-essential python3-dev python3-mysqldb python3-virtualenv git
 # patch mysql conf to not change uid, and to use /var/tmp over /tmp
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \

@@ -42,7 +42,7 @@ wait_for mysql $MYSQL_SOCKET_FILE
 # Spawn uwsgi
 HOME=/var uwsgi \
         --socket $UWSGI_SOCKET_FILE \
-        --plugin python \
+        --plugin python3 \
         --virtualenv /opt/app/env \
         --wsgi-file /opt/app/main.py &
 
