@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-VENV=/opt/app/env
+VENV=/opt/app-venv
 if [ ! -d $VENV ] ; then
+    sudo mkdir -p $VENV -m777
     virtualenv $VENV
 else
     echo "$VENV exists, moving on"
