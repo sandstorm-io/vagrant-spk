@@ -14,12 +14,12 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "Installing the NodeSource Node.js 14.x repo..."
+echo "Installing the NodeSource Node.js 16.x repo..."
 
 apt-get update
 apt-get install -qq apt-transport-https
 
-curl -sL https://deb.nodesource.com/setup_14.x | bash -
+curl -sL https://deb.nodesource.com/setup_16.x | bash -
 
 # Actually install node
 apt-get install -qq nodejs git-core g++
