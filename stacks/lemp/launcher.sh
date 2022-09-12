@@ -33,10 +33,10 @@ HOME=/etc/mysql /usr/sbin/mysqld --initialize
 
 # Spawn mysqld, php
 HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
-/usr/sbin/php-fpm7.3 --nodaemonize --fpm-config /etc/php/7.3/fpm/php-fpm.conf &
+/usr/sbin/php-fpm7.4 --nodaemonize --fpm-config /etc/php/7.4/fpm/php-fpm.conf &
 # Wait until mysql and php have bound their sockets, indicating readiness
 wait_for mysql /var/run/mysqld/mysqld.sock
-wait_for php-fpm7.3 /var/run/php/php7.3-fpm.sock
+wait_for php-fpm7.4 /var/run/php/php7.4-fpm.sock
 
 # Start nginx.
 /usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"

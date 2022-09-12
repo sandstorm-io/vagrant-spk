@@ -42,8 +42,8 @@ wait_for mysql $MYSQL_SOCKET_FILE
 # Spawn uwsgi
 HOME=/var uwsgi \
         --socket $UWSGI_SOCKET_FILE \
-        --plugin python \
-        --virtualenv /opt/app/env \
+        --plugin python3 \
+        --virtualenv /opt/app-venv \
         --wsgi-file /opt/app/main.py &
 
 # Wait for uwsgi to bind its socket
