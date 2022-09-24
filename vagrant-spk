@@ -198,8 +198,8 @@ apt-mark hold grub-pc
 apt-get update
 apt-get upgrade -y
 
-# Install curl that is needed below.
-apt-get install -y curl
+# Install curl needed below, and gnupg for package signing
+apt-get install -y curl gnupg
 
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
 # output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
