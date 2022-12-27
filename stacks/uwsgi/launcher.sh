@@ -26,6 +26,14 @@ rm -rf /var/tmp
 mkdir -p /var/tmp
 mkdir -p /var/run/mysqld
 
+# Rotate log files larger than 512K
+log_files="$(find /var/log -type f -name '*.log')"
+for f in $log_files; do
+    if [ $(du -b "$f" | awk '{print $1}') -ge $((512 * 1024)) ] ; then
+        mv $f $f.1
+    fi
+done
+
 UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
 
 # Ensure mysql tables created
