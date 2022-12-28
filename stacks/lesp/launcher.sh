@@ -21,6 +21,14 @@ mkdir -p /var/log/nginx
 rm -rf /var/run
 mkdir -p /var/run/php
 
+# Rotate log files larger than 512K
+log_files="$(find /var/log -type f -name '*.log')"
+for f in $log_files; do
+    if [ $(du -b "$f" | awk '{print $1}') -ge $((512 * 1024)) ] ; then
+        mv $f $f.1
+    fi
+done
+
 # Spawn php
 /usr/sbin/php-fpm7.4 --nodaemonize --fpm-config /etc/php/7.4/fpm/php-fpm.conf &
 # Wait until php has bound its socket, indicating readiness
