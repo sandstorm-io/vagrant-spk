@@ -83,6 +83,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # needs to know how to compile kernel modules, etc., and so
     # we give it this hint about operating system type.
     config.vm.guest = "debian"
+    config.vbguest.auto_update = false
   end
 
   # We forward port 6090, the vagrant-spk web port, so that developers can
