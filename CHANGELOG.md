@@ -1,3 +1,16 @@
+### v1.1.2 (2023-11-01)
+- Updated Windows build to Python 3.11.6.
+- Updated base image to Debian Bullseye.
+- Updated golang stack to use the latest Go.
+- Updated node stack to use new installation script.
+- Updated uwsgi stack to Python 3.
+- Configured stacks with Nginx or MySQL to rotate log files by default. (Thanks @zenhack)
+- Fix issue with synced folder which can cause Sandstorm to fail on boot. (Thanks @troyjfarrell)
+- Fix issue with upgrading Virtualbox Guest Additions causing startup to hang.
+- Fix `upgradevm` command. (Thanks @zenhack)
+- Fix link to running server in terminal. (Thanks @zenhack)
+- Exclude Vagrant log files in gitignore. (Thanks @zenhack)
+
 ### v1.1.1 (2021-04-19)
 - Updated Windows build to Python 3.8.9.
 - No longer includes ssh.exe in Windows release.
