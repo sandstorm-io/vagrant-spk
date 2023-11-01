@@ -10,7 +10,7 @@ distclean:
 	rm -rf state build vendor dist ../build ../dist vagrant-spk.spec
 
 wine: /usr/bin/wine
-	sudo apt-get install wine=5.0-3ubuntu1
+	sudo apt-get install wine wine32
 
 vendor:
 	mkdir -p vendor
@@ -19,26 +19,26 @@ state:
 	mkdir -p state
 
 vendor/python.exe: | vendor state/wineprefix
-	wget https://www.python.org/ftp/python/3.9.4/python-3.9.4.exe -O vendor/python.exe
+	wget https://www.python.org/ftp/python/3.11.6/python-3.11.6.exe -O vendor/python.exe
 	touch vendor/python.exe
 
 vendor/python.exe.installed: | vendor/python.exe
 	cp vendor/python.exe vendor/python-tmp.exe
-	$(WINEARGS) $(WINE) vendor/python-tmp.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+	$(WINEARGS) $(WINE) vendor/python-tmp.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 AssociateFiles=0 Shortcuts=0
 	touch vendor/python.exe.installed
 
 state/pyinstaller.installed: | vendor/python.exe.installed
-	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python39-32/python.exe' -m pip install pyinstaller
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python311-32/python.exe' -m pip install pyinstaller
 	touch state/pyinstaller.installed
 
 dist/vagrant-spk.exe: ../vagrant-spk | state/pyinstaller.installed
-	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python39-32/Scripts/pyinstaller' -F ../vagrant-spk
+	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python311-32/Scripts/pyinstaller.exe' -F ../vagrant-spk
 
 vendor/innosetup.exe: | vendor
 	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
 
 vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
-	$(WINEARGS) $(WINE) vendor/innosetup.exe /VERYSILENT
+	$(WINEARGS) $(WINE) vendor/innosetup.exe /SP- /VERYSILENT /SUPPRESSMSGBOXES /ALLUSERS /NOICONS
 	touch vendor/innosetup.exe.installed
 
 state/version.iss: ../vagrant-spk
