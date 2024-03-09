@@ -35,15 +35,26 @@ for f in $log_files; do
     fi
 done
 
-# Ensure mysql tables created
-# HOME=/etc/mysql /usr/bin/mysql_install_db
-HOME=/etc/mysql /usr/sbin/mysqld --initialize
+if [ ! -e /var/.db-initialized ]; then
+    # Ensure mysql tables created
+    HOME=/etc/mysql /usr/sbin/mysqld --initialize
+    touch /var/.db-initialized
+fi
 
 # Spawn mysqld, php
 HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 /usr/sbin/php-fpm8.2 --nodaemonize --fpm-config /etc/php/8.2/fpm/php-fpm.conf &
-# Wait until mysql and php have bound their sockets, indicating readiness
+# Wait until mysql has bound its socket, indicating readiness
 wait_for mysql /var/run/mysqld/mysqld.sock
+
+# # Uncomment this block if you need to preload a database for your app
+# if [ ! -e /var/.db-created ]; then
+#    mysql --user root -e 'CREATE DATABASE app'
+#    mysql --user root --database app < /opt/app/install.sql
+#    touch /var/.db-created
+# fi
+
+# Wait until php has bound its socket, indicating readiness
 wait_for php-fpm8.2 /var/run/php/php8.2-fpm.sock
 
 # Start nginx.
