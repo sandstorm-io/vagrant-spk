@@ -30,9 +30,9 @@ for f in $log_files; do
 done
 
 # Spawn php
-/usr/sbin/php-fpm7.4 --nodaemonize --fpm-config /etc/php/7.4/fpm/php-fpm.conf &
+/usr/sbin/php-fpm8.2 --nodaemonize --fpm-config /etc/php/8.2/fpm/php-fpm.conf &
 # Wait until php has bound its socket, indicating readiness
-wait_for php-fpm7.4 /var/run/php/php7.4-fpm.sock
+wait_for php-fpm8.2 /var/run/php/php8.2-fpm.sock
 
 # Start nginx.
 /usr/sbin/nginx -c /opt/app/.sandstorm/service-config/nginx.conf -g "daemon off;"

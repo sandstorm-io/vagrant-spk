@@ -7,12 +7,12 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo -e "deb http://repo.mysql.com/apt/debian/ bullseye mysql-8.0\ndeb-src http://repo.mysql.com/apt/debian/ bullseye mysql-8.0" > /etc/apt/sources.list.d/mysql.list
-wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+echo -e "deb http://repo.mysql.com/apt/debian/ bookworm mysql-8.0\ndeb-src http://repo.mysql.com/apt/debian/ bookworm mysql-8.0" > /etc/apt/sources.list.d/mysql.list
+wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
 apt-key add /tmp/RPM-GPG-KEY-mysql
 
 apt-get update
-apt-get install -y nginx mysql-server libmysqlclient-dev uwsgi uwsgi-plugin-python3 build-essential python3-dev python3-mysqldb python3-virtualenv git
+apt-get install -y nginx mysql-server libmysqlclient-dev libssl-dev pkg-config uwsgi uwsgi-plugin-python3 build-essential python3-dev python3-mysqldb python3-virtualenv git
 # patch mysql conf to not change uid, and to use /var/tmp over /tmp
 sed --in-place='' \
         --expression='s/^user\t\t= mysql/#user\t\t= mysql/' \
