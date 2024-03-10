@@ -36,10 +36,9 @@ done
 
 UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
 
-if [ ! -e /var/.db-initialized ]; then
+if [ ! -d /var/lib/mysql/mysql ]; then
     # Ensure mysql tables created
     HOME=/etc/mysql /usr/sbin/mysqld --initialize
-    touch /var/.db-initialized
 fi
 
 # Spawn mysqld
