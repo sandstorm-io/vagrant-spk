@@ -36,9 +36,10 @@ done
 
 UWSGI_SOCKET_FILE=/var/run/uwsgi.sock
 
-# Ensure mysql tables created
-# HOME=/etc/mysql /usr/bin/mysql_install_db
-HOME=/etc/mysql /usr/sbin/mysqld --initialize
+if [ ! -d /var/lib/mysql/mysql ]; then
+    # Ensure mysql tables created
+    HOME=/etc/mysql /usr/sbin/mysqld --initialize
+fi
 
 # Spawn mysqld
 HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
@@ -46,6 +47,13 @@ HOME=/etc/mysql /usr/sbin/mysqld --skip-grant-tables &
 MYSQL_SOCKET_FILE=/var/run/mysqld/mysqld.sock
 # Wait for mysql to bind its socket
 wait_for mysql $MYSQL_SOCKET_FILE
+
+# # Uncomment this block if you need to preload a database for your app
+# if [ ! -e /var/.db-created ]; then
+#    mysql --user root -e 'CREATE DATABASE app'
+#    mysql --user root --database app < /opt/app/install.sql
+#    touch /var/.db-created
+# fi
 
 # Spawn uwsgi
 HOME=/var uwsgi \
