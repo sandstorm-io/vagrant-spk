@@ -1,3 +1,9 @@
+### v1.2 (2024-03-16)
+- Updated base image to Debian Bookworm.
+- Configured MySQL stacks to only initialize the database once.
+- Removed legacy node6 stack.
+- Updated meteor stack to use the latest meteor-spk.
+
 ### v1.1.2 (2023-11-01)
 - Updated Windows build to Python 3.11.6.
 - Updated base image to Debian Bullseye.

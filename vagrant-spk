@@ -23,7 +23,7 @@
 from __future__ import print_function
 
 # TODO(someday): Increment version number and commit as part of release.sh
-__version__ = "v1.1.2"
+__version__ = "v1.2"
 
 import argparse
 import os
