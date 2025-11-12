@@ -22,11 +22,7 @@ sed --in-place='' \
 cat <<EOF > /etc/mysql/conf.d/sandstorm.cnf
 [mysqld]
 # Set the transaction log file to the minimum allowed size to save disk space.
-# MariaDB <= 10.8.2 => 1048576
-# MariaDB >= 10.8.3 (20 MAY 2022) => 4194304
-# MySQL <= 5.6 => 1048576
-# MySQL >= 5.7 (21 OCT 2015) => 4194304
-innodb_log_file_size = 1048576
+innodb_log_file_size = 4194304
 # Set the main data file to grow by 1MB at a time, rather than 8MB at a time.
 innodb_autoextend_increment = 1
 EOF
