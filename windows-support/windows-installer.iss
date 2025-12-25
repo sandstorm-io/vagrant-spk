@@ -3,7 +3,7 @@
 
 #define MyAppName "vagrant-spk"
 #include "state/version.iss"
-#define MyAppPublisher "Sandstorm Development Group, Inc."
+#define MyAppPublisher "The Sandstorm Project"
 #define MyAppURL "https://docs.sandstorm.io/"
 #define MyAppExeName "vagrant-spk.exe"
 
