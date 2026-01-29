@@ -147,8 +147,12 @@ GITIGNORE_CONTENTS = r"""
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
 
-# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The lima-spk upgradevm process will overwrite it.
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
 # App-specific setup should be done in the setup.sh file.
+
+# Set options for curl. Since we only want to show errors from these curl commands, we also use
+# 'cat' to buffer the output; for more information:
+# https://github.com/sandstorm-io/vagrant-spk/issues/158
 
 CURL_OPTS="--silent --show-error"
 echo localhost > /etc/hostname
@@ -162,9 +166,8 @@ apt-get upgrade -y
 # Install curl needed below, and gnupg for package signing
 apt-get install -y curl gnupg netcat-openbsd
 
-
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
-# output file.
+# output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
 curl $CURL_OPTS https://install.sandstorm.io/ 2>&1 > /host-dot-sandstorm/caches/install.sh | cat
 
 SANDSTORM_CURRENT_VERSION=$(curl $CURL_OPTS -f "https://install.sandstorm.io/dev?from=0&type=install")
@@ -184,12 +187,12 @@ modprobe ip_tables || true
 # Make the vagrant user part of the sandstorm group so that commands like
 # `spk dev` work.
 usermod -a -G 'sandstorm' 'vagrant'
-# Bind to all addresses, so the port-forward works.
+# Bind to all addresses, so the vagrant port-forward works.
 sudo sed --in-place='' \
         --expression='s/^BIND_IP=.*/BIND_IP=0.0.0.0/' \
         /opt/sandstorm/sandstorm.conf
 
-# Force lima-spk to use the strict CSP, see sandstorm#3424 for details.
+# Force vagrant-spk to use the strict CSP, see sandstorm#3424 for details.
 echo 'ALLOW_LEGACY_RELAXED_CSP=false' >> /opt/sandstorm/sandstorm.conf
 
 sudo service sandstorm restart
