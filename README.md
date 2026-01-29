@@ -37,3 +37,10 @@ for full details.
 
 See the [example app listing in the vagrant-spk
 documentation.](https://docs.sandstorm.io/en/latest/vagrant-spk/customizing/#example-setups)
+
+## About lima-spk
+
+`lima-spk` is an experimental alternative tool which uses Lima and QEMU instead
+of Vagrant and Virtualbox. It is specifically designed to enable app development
+on ARM64-based Apple Silicon Macs. **Disclosure:** This tool was built with some
+AI assistance and has not been robustly tested yet.
