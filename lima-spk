@@ -147,8 +147,12 @@ GITIGNORE_CONTENTS = r"""
 GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
 set -euo pipefail
 
-# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The lima-spk upgradevm process will overwrite it.
+# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
 # App-specific setup should be done in the setup.sh file.
+
+# Set options for curl. Since we only want to show errors from these curl commands, we also use
+# 'cat' to buffer the output; for more information:
+# https://github.com/sandstorm-io/vagrant-spk/issues/158
 
 CURL_OPTS="--silent --show-error"
 echo localhost > /etc/hostname
@@ -162,9 +166,8 @@ apt-get upgrade -y
 # Install curl needed below, and gnupg for package signing
 apt-get install -y curl gnupg netcat-openbsd
 
-
 # The following line copies stderr through stderr to cat without accidentally leaving it in the
-# output file.
+# output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
 curl $CURL_OPTS https://install.sandstorm.io/ 2>&1 > /host-dot-sandstorm/caches/install.sh | cat
 
 SANDSTORM_CURRENT_VERSION=$(curl $CURL_OPTS -f "https://install.sandstorm.io/dev?from=0&type=install")
@@ -184,12 +187,12 @@ modprobe ip_tables || true
 # Make the vagrant user part of the sandstorm group so that commands like
 # `spk dev` work.
 usermod -a -G 'sandstorm' 'vagrant'
-# Bind to all addresses, so the port-forward works.
+# Bind to all addresses, so the vagrant port-forward works.
 sudo sed --in-place='' \
         --expression='s/^BIND_IP=.*/BIND_IP=0.0.0.0/' \
         /opt/sandstorm/sandstorm.conf
 
-# Force lima-spk to use the strict CSP, see sandstorm#3424 for details.
+# Force vagrant-spk to use the strict CSP, see sandstorm#3424 for details.
 echo 'ALLOW_LEGACY_RELAXED_CSP=false' >> /opt/sandstorm/sandstorm.conf
 
 sudo service sandstorm restart
@@ -369,6 +372,14 @@ def ensure_host_sandstorm_folder_exists():
         with open(keyring_file, "wb") as f:
             pass
 
+def confirm_overwrite(filepath, noninteractive):
+    if noninteractive:
+        return True
+    if os.path.exists(filepath):
+        resp = input("This command will overwrite some existing packaging configuration. Proceed? [y/N]: ").strip().lower()
+        return resp == 'y'
+    return True
+
 class StackPlugin(object):
     def __init__(self, plugin_name):
         self._plugin_name = plugin_name
@@ -415,9 +426,14 @@ def setup_vm(args):
 
     # Copy global setup script
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
-    with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
-    os.chmod(global_setup_script_path, 0o755)
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(global_setup_script_path, noninteractive):
+        with open(global_setup_script_path, "wb") as f:
+            f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
+        os.chmod(global_setup_script_path, 0o755)
+    else:
+        print("Aborted.")
+        return
 
     # Copy stack-specific setup script
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
@@ -478,9 +494,14 @@ def upgrade_vm(args):
     print(f"Upgrading VM parameters in {sandstorm_dir}")
 
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
-    with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
-    os.chmod(global_setup_script_path, 0o755)
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(global_setup_script_path, noninteractive):
+        with open(global_setup_script_path, "wb") as f:
+            f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
+        os.chmod(global_setup_script_path, 0o755)
+    else:
+        print("Aborted.")
+        return
 
     lima_yaml_path = os.path.join(sandstorm_dir, "lima.yaml")
     with open(lima_yaml_path, "w") as f:
@@ -613,16 +634,22 @@ def init(args):
     instance_name = require_running_vm(args.work_directory)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
 
-    stack_path = os.path.join(sandstorm_dir, "stack")
-    with open(stack_path) as f:
-        stack = f.read().strip()
-    stack_plugin = StackPlugin(stack)
-    init_args = stack_plugin.init_args()
+    pkgdef_path = os.path.join(sandstorm_dir, "sandstorm-pkgdef.capnp")
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(pkgdef_path, noninteractive):
+        stack_path = os.path.join(sandstorm_dir, "stack")
+        with open(stack_path) as f:
+            stack = f.read().strip()
+        stack_plugin = StackPlugin(stack)
+        init_args = stack_plugin.init_args()
 
-    call_lima_shell_command(
-        instance_name,
-        f"spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {init_args} -- /bin/bash /opt/app/.sandstorm/launcher.sh"
-    )
+        call_lima_shell_command(
+            instance_name,
+            f"spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {init_args} -- /bin/bash /opt/app/.sandstorm/launcher.sh"
+        )
+    else:
+        print("Aborted.")
+        return
 
 def dev(args):
     check_dot_sandstorm(args.work_directory)
@@ -920,6 +947,7 @@ def main():
         help="Use this working directory (e.g. for .sandstorm/ \n"
              "and other configuration).  [Default: current \n"
              "working directory]")
+    parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
     args = parser.parse_args(sys.argv[1:])
     operation = op_to_func[args.command]
     operation(args)
