@@ -395,6 +395,14 @@ def ensure_host_sandstorm_folder_exists():
         with open(keyring_file, "wb") as f:
             pass
 
+def confirm_overwrite(filepath, noninteractive):
+    if noninteractive:
+        return True
+    if os.path.exists(filepath):
+        resp = input("This command will overwrite some existing packaging configuration. Proceed? [y/N]: ").strip().lower()
+        return resp == 'y'
+    return True
+
 class StackPlugin(object):
     def __init__(self, plugin_name):
         self._plugin_name = plugin_name
@@ -603,9 +611,14 @@ def setup_vm(args):
 
     # Copy global setup script to e.g. install and configure sandstorm
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
-    with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
-    os.chmod(global_setup_script_path, 0o755)
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(global_setup_script_path, noninteractive):
+        with open(global_setup_script_path, "wb") as f:
+            f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
+        os.chmod(global_setup_script_path, 0o755)
+    else:
+        print("Aborted.")
+        return
 
     # Copy stack-specific script to e.g. install and configure nginx, mysql, and php5-fpm
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
@@ -667,9 +680,14 @@ def upgrade_vm(args):
     print("Upgrading VM parameters in {}".format(sandstorm_dir))
     # Copy global setup script to e.g. install and configure sandstorm
     global_setup_script_path = os.path.join(sandstorm_dir, "global-setup.sh")
-    with open(global_setup_script_path, "wb") as f:
-        f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
-    os.chmod(global_setup_script_path, 0o755)
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(global_setup_script_path, noninteractive):
+        with open(global_setup_script_path, "wb") as f:
+            f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
+        os.chmod(global_setup_script_path, 0o755)
+    else:
+        print("Aborted.")
+        return
     # Copy in Vagrantfile
     vagrantfile_path = os.path.join(sandstorm_dir, "Vagrantfile")
     with open(vagrantfile_path, "w") as f:
@@ -688,14 +706,20 @@ def bring_up_vm(args):
 
 def init(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    # Figure out which stack created this runtime, so we can load appropriate additional init args.
-    stack_path = os.path.join(sandstorm_dir, "stack")
-    with open(stack_path) as f:
-        stack = f.read().strip()
-    stack_plugin = StackPlugin(stack)
-    init_args = stack_plugin.init_args()
-    # Initialize the package with spk init
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /bin/bash /opt/app/.sandstorm/launcher.sh".format(init_args))
+    pkgdef_path = os.path.join(sandstorm_dir, "sandstorm-pkgdef.capnp")
+    noninteractive = getattr(args, 'noninteractive', False)
+    if confirm_overwrite(pkgdef_path, noninteractive):
+        # Figure out which stack created this runtime, so we can load appropriate additional init args.
+        stack_path = os.path.join(sandstorm_dir, "stack")
+        with open(stack_path) as f:
+            stack = f.read().strip()
+        stack_plugin = StackPlugin(stack)
+        init_args = stack_plugin.init_args()
+        # Initialize the package with spk init
+        call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /bin/bash /opt/app/.sandstorm/launcher.sh".format(init_args))
+    else:
+        print("Aborted.")
+        return
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -1006,6 +1030,7 @@ def main():
         help="Use this working directory (e.g. for .sandstorm/ \n"
              "and other configuration).  [Default: current \n"
              "working directory]")
+    parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
     args = parser.parse_args(sys.argv[1:])
     operation = op_to_func[args.command]
     operation(args)
