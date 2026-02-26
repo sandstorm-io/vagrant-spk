@@ -253,6 +253,84 @@ def call_lima_shell_command(instance_name, command_string, interactive=False):
     else:
         return subprocess.check_call(['limactl', 'shell', '--workdir', '/opt/app', instance_name, 'bash', '-c', command_string])
 
+GRAIN_LOG_TAILER_SCRIPT = r'''set -euo pipefail
+
+colors=(31 32 33 34 35 36 91 92 93 94 95 96)
+declare -A tail_pids
+declare -A grain_colors
+color_index=0
+
+cleanup() {
+  for pid in "${tail_pids[@]:-}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT INT TERM
+
+spawn_tail() {
+  local grain_id="$1"
+  local log_path="$2"
+  local prefix="${grain_id:0:6}"
+  local color
+
+  if [ -n "${grain_colors[$grain_id]+set}" ]; then
+    color="${grain_colors[$grain_id]}"
+  else
+    color="${colors[$((color_index % ${#colors[@]}))]}"
+    grain_colors[$grain_id]="$color"
+    color_index=$((color_index + 1))
+  fi
+
+  (
+    tail -n 0 -F "$log_path" 2>/dev/null | while IFS= read -r line; do
+      printf '\r\033[K\033[%sm[%s]\033[0m %s\n' "$color" "$prefix" "$line"
+    done
+  ) &
+  tail_pids[$grain_id]=$!
+}
+
+while true; do
+  for log_path in /opt/sandstorm/var/sandstorm/grains/*/log; do
+    [ -f "$log_path" ] || continue
+    grain_id="$(basename "$(dirname "$log_path")")"
+    if [ -n "${tail_pids[$grain_id]+set}" ] && kill -0 "${tail_pids[$grain_id]}" 2>/dev/null; then
+      continue
+    fi
+    spawn_tail "$grain_id" "$log_path"
+  done
+  sleep 1
+done
+'''
+
+def build_grain_log_tailer_command():
+    """Return command that starts the grain tailer in the background."""
+    return "sudo -u sandstorm bash -lc " + shlex.quote(GRAIN_LOG_TAILER_SCRIPT)
+
+def build_dev_session_script():
+    """Build a readable script for `lima-spk dev` in one remote shell session."""
+    cleanup = (
+        "if [ -n \"${grain_tail_pid:-}\" ]; then "
+        "kill $grain_tail_pid 2>/dev/null || true; "
+        "wait $grain_tail_pid 2>/dev/null || true; "
+        "fi"
+    )
+    run_spk_dev = build_spk_dev_command()
+    return "\n".join([
+        "set -euo pipefail",
+        "trap " + shlex.quote(cleanup) + " EXIT INT TERM",
+        build_grain_log_tailer_command() + " &",
+        "grain_tail_pid=$!",
+        "sg sandstorm -c " + shlex.quote(run_spk_dev),
+    ])
+
+def build_spk_dev_command():
+    """Return shell command used for starting `spk dev`."""
+    return (
+        "/opt/app/.sandstorm/build.sh && "
+        "cd /opt/app/.sandstorm && "
+        "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
+    )
+
 KEYRING_PATH = "/host-dot-sandstorm/sandstorm-keyring"
 
 def call_spk_command(instance_name, spk_subcommand, extra_args="", use_keyring=True, interactive=False):
@@ -577,11 +655,15 @@ def init(args):
 def dev(args):
     check_dot_sandstorm(args.work_directory)
     instance_name = require_running_vm(args.work_directory)
+    if args.tail:
+        sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
+        call_lima_shell_command(instance_name, build_dev_session_script(), interactive=True)
+        return
 
-    # Use sg to run with the sandstorm group (group membership changes require new session)
+    # Default behavior: run dev mode without grain log tailing.
     call_lima_shell_command(
         instance_name,
-        "sg sandstorm -c '/opt/app/.sandstorm/build.sh && cd /opt/app/.sandstorm && spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef'",
+        "sg sandstorm -c " + shlex.quote(build_spk_dev_command()),
         interactive=True
     )
 
@@ -871,7 +953,10 @@ def main():
              "and other configuration).  [Default: current \n"
              "working directory]")
     parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
+    parser.add_argument('--tail', action='store_true', help='With `dev`, tail all grain logs with colored grain-id prefixes')
     args = parser.parse_args(sys.argv[1:])
+    if args.tail and args.command != 'dev':
+        parser.error("--tail is only supported with the `dev` command")
     operation = op_to_func[args.command]
     operation(args)
 
