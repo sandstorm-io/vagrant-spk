@@ -45,6 +45,15 @@ LIMA_INSTANCE_PREFIX = "sandstorm"
 # Port for Sandstorm dev server
 SANDSTORM_PORT = 6090
 
+
+def load_required_template_file(relative_path):
+    """Load a required template from the repository's files/ directory."""
+    template_path = os.path.join(CODE_DIR, relative_path)
+    if not os.path.exists(template_path):
+        raise Exception("Required template missing: {}".format(template_path))
+    with open(template_path, "r") as f:
+        return f.read()
+
 def get_lima_instance_name(work_directory):
     """Generate a unique Lima instance name based on the work directory."""
     # Use a hash of the absolute path to ensure uniqueness
@@ -128,96 +137,10 @@ message: |
   To delete: lima-spk vm destroy
 '''
 
-GITATTRIBUTES_CONTENTS = r"""
-
-# lima-spk creates shell scripts, which must end in \n, even on a \r\n system.
-*.sh text eol=lf
-
-"""
-
-GITIGNORE_CONTENTS = r"""
-
-# This file stores a list of sub-paths of .sandstorm/ that should be ignored by git.
-
-# Lima sometimes generates log files:
-*.log
-
-"""
-
-GLOBAL_SETUP_SCRIPT = r"""#!/bin/bash
-set -euo pipefail
-
-# CAUTION: DO NOT MAKE CHANGES TO THIS FILE. The vagrant-spk upgradevm process will overwrite it.
-# App-specific setup should be done in the setup.sh file.
-
-# Set options for curl. Since we only want to show errors from these curl commands, we also use
-# 'cat' to buffer the output; for more information:
-# https://github.com/sandstorm-io/vagrant-spk/issues/158
-
-CURL_OPTS="--silent --show-error"
-echo localhost > /etc/hostname
-hostname localhost
-
-# Grub updates don't silent install well
-apt-mark hold grub-pc || true
-apt-get update
-apt-get upgrade -y
-
-# Install curl needed below, and gnupg for package signing
-apt-get install -y curl gnupg netcat-openbsd
-
-# The following line copies stderr through stderr to cat without accidentally leaving it in the
-# output file. Be careful when changing. See: https://github.com/sandstorm-io/vagrant-spk/pull/159
-curl $CURL_OPTS https://install.sandstorm.io/ 2>&1 > /host-dot-sandstorm/caches/install.sh | cat
-
-SANDSTORM_CURRENT_VERSION=$(curl $CURL_OPTS -f "https://install.sandstorm.io/dev?from=0&type=install")
-SANDSTORM_PACKAGE="sandstorm-$SANDSTORM_CURRENT_VERSION.tar.xz"
-if [[ ! -f /host-dot-sandstorm/caches/$SANDSTORM_PACKAGE ]] ; then
-    echo -n "Downloading Sandstorm version ${SANDSTORM_CURRENT_VERSION}..."
-    curl $CURL_OPTS --output "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "https://dl.sandstorm.io/$SANDSTORM_PACKAGE" 2>&1 | cat
-    mv "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE.partial" "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE"
-    echo "...done."
-fi
-if [ ! -e /opt/sandstorm/latest/sandstorm ] ; then
-    echo -n "Installing Sandstorm version ${SANDSTORM_CURRENT_VERSION}..."
-    bash /host-dot-sandstorm/caches/install.sh -d -e -p __SANDSTORM_PORT__ "/host-dot-sandstorm/caches/$SANDSTORM_PACKAGE" >/dev/null
-    echo "...done."
-fi
-modprobe ip_tables || true
-# Make the vagrant user part of the sandstorm group so that commands like
-# `spk dev` work.
-usermod -a -G 'sandstorm' 'vagrant'
-# Bind to all addresses, so the vagrant port-forward works.
-sudo sed --in-place='' \
-        --expression='s/^BIND_IP=.*/BIND_IP=0.0.0.0/' \
-        /opt/sandstorm/sandstorm.conf
-
-# Force vagrant-spk to use the strict CSP, see sandstorm#3424 for details.
-echo 'ALLOW_LEGACY_RELAXED_CSP=false' >> /opt/sandstorm/sandstorm.conf
-
-sudo service sandstorm restart
-# Enable apt-cacher-ng proxy to make things faster if one appears to be running on the gateway IP
-GATEWAY_IP=$(ip route  | grep ^default  | cut -d ' ' -f 3) || true
-if [ -n "$GATEWAY_IP" ] && nc -z "$GATEWAY_IP" 3142 2>/dev/null; then
-    echo "Acquire::http::Proxy \"http://$GATEWAY_IP:3142\";" > /etc/apt/apt.conf.d/80httpproxy
-fi
-# Configure apt to retry fetching things that fail to download.
-echo "APT::Acquire::Retries \"10\";" > /etc/apt/apt.conf.d/80sandstorm-retry
-"""
-
-EMPTY_BUILD_SCRIPT = r"""#!/bin/bash
-set -euo pipefail
-# This is a script that is run every time you call "lima-spk dev".
-# It is intended to do platform-and-repository-specific build steps.  You
-# might customize it to do any of the following, or more:
-# - for Python, prepare a virtualenv and pip install -r requirements.txt
-# - for PHP, call composer to retrieve additional packages
-# - for JS/CSS/SASS/LESS, compile, minify, or otherwise do asset pipeline work.
-# This particular script does nothing at present, but you should adapt it
-# sensibly for your package.
-
-exit 0
-"""
+GITATTRIBUTES_CONTENTS = load_required_template_file("files/gitattributes")
+GITIGNORE_CONTENTS = load_required_template_file("files/gitignore")
+GLOBAL_SETUP_SCRIPT = load_required_template_file("files/global-setup.sh")
+EMPTY_BUILD_SCRIPT = load_required_template_file("files/empty-build.sh")
 
 TMP_LIMA_SPK_LOCATION = '/var/tmp/lima-spk'
 
@@ -429,7 +352,7 @@ def setup_vm(args):
     noninteractive = getattr(args, 'noninteractive', False)
     if confirm_overwrite(global_setup_script_path, noninteractive):
         with open(global_setup_script_path, "wb") as f:
-            f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
+            f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
         os.chmod(global_setup_script_path, 0o755)
     else:
         print("Aborted.")
@@ -497,7 +420,7 @@ def upgrade_vm(args):
     noninteractive = getattr(args, 'noninteractive', False)
     if confirm_overwrite(global_setup_script_path, noninteractive):
         with open(global_setup_script_path, "wb") as f:
-            f.write(GLOBAL_SETUP_SCRIPT.replace("__SANDSTORM_PORT__", str(SANDSTORM_PORT)).encode("UTF-8"))
+            f.write(GLOBAL_SETUP_SCRIPT.encode("UTF-8"))
         os.chmod(global_setup_script_path, 0o755)
     else:
         print("Aborted.")
