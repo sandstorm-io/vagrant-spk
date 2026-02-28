@@ -76,38 +76,6 @@ clear_emulator_capabilities = 0
   development as).
 
 
-## Install vagrant-mutate and import a box
-
-We need the `vagrant-mutate` plugin to import a box originally packaged for VirtualBox, convert it
-to the libvirt disk image format, and register it as the equivalent box name for Vagrant to use it.
-
-### Install build dependencies:
-
-Fedora:
-
-```bash
-sudo dnf install qemu-img libvirt-devel ruby-libvirt ruby-devel
-```
-
-### Install the plugin:
-
-```bash
-vagrant plugin install mutate
-```
-
-### Import the VirtualBox box:
-
-```bash
-vagrant box add sandstorm/debian-jessie64
-```
-
-### Produce an appropriate box for usage with libvirt:
-
-```bash
-vagrant mutate sandstorm/debian-jessie64 libvirt
-```
-
-
 ## Set libvirt default provider
 
 Fedora users can skip this step.
