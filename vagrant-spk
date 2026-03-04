@@ -52,18 +52,18 @@ CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 
 
 def load_required_template_file(relative_path):
-    """Load a required template from the repository's files/ directory."""
+    """Load a required template from the repository's box/ directory."""
     template_path = os.path.join(CODE_DIR, relative_path)
     if not os.path.exists(template_path):
         raise Exception("Required template missing: {}".format(template_path))
     with open(template_path, "r") as f:
         return f.read()
 
-GITATTRIBUTES_CONTENTS = load_required_template_file("files/gitattributes")
-GITIGNORE_CONTENTS = load_required_template_file("files/gitignore")
-VAGRANTFILE_CONTENTS = load_required_template_file("files/Vagrantfile")
-GLOBAL_SETUP_SCRIPT = load_required_template_file("files/global-setup.sh")
-EMPTY_BUILD_SCRIPT = load_required_template_file("files/empty-build.sh")
+GITATTRIBUTES_CONTENTS = load_required_template_file("box/gitattributes")
+GITIGNORE_CONTENTS = load_required_template_file("box/gitignore")
+VAGRANTFILE_CONTENTS = load_required_template_file("box/Vagrantfile")
+GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
+EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
 
 # Where to look for the vagrant-spk dir from inside the vm
 TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
