@@ -264,7 +264,7 @@ def build_spk_dev_command():
     )
 
 def sync_dev_helper_scripts_if_changed(sandstorm_dir):
-    """Write helper scripts for `dev --tail` into .sandstorm only if changed."""
+    """Write helper scripts for `dev` log tailing into .sandstorm only if changed."""
     helper_scripts = {
         "grain-log-tailer.sh": GRAIN_LOG_TAILER_SCRIPT,
         "dev-with-tail.sh": DEV_WITH_TAIL_SCRIPT,
@@ -610,12 +610,9 @@ def dev(args):
     check_dot_sandstorm(args.work_directory)
     instance_name = require_running_vm(args.work_directory)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    if args.tail:
-        sync_dev_helper_scripts_if_changed(sandstorm_dir)
-        sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
-        command = build_tail_wrapped_dev_command()
-    else:
-        command = "sg sandstorm -c " + shlex.quote(build_spk_dev_command())
+    sync_dev_helper_scripts_if_changed(sandstorm_dir)
+    sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
+    command = build_tail_wrapped_dev_command()
     call_lima_shell_command(
         instance_name,
         command,
@@ -908,10 +905,7 @@ def main():
              "and other configuration).  [Default: current \n"
              "working directory]")
     parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
-    parser.add_argument('--tail', action='store_true', help='With `dev`, tail all grain logs with colored grain-id prefixes')
     args = parser.parse_args(sys.argv[1:])
-    if args.tail and args.command != 'dev':
-        parser.error("--tail is only supported with the `dev` command")
     operation = op_to_func[args.command]
     operation(args)
 

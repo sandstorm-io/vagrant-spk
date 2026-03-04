@@ -13,7 +13,6 @@
     vagrant-spk init
     # edit .sandstorm/sandstorm-pkgdef.capnp in your editor of choice
     vagrant-spk dev
-    # or: vagrant-spk --tail dev   (also tail grain logs with colored prefixes)
     # visit http://local.sandstorm.io:6090 in a web browser
     # log in as Alice, the admin account
     # launch an instance of the example app, play around with it
