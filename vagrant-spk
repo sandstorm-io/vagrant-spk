@@ -30,6 +30,7 @@ import os
 import glob
 import hashlib
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -64,6 +65,8 @@ GITIGNORE_CONTENTS = load_required_template_file("box/gitignore")
 VAGRANTFILE_CONTENTS = load_required_template_file("box/Vagrantfile")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
 EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
+
+DEV_WITH_TAIL_SCRIPT = load_required_template_file("box/dev-with-tail.sh")
 
 # Where to look for the vagrant-spk dir from inside the vm
 TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
@@ -531,13 +534,46 @@ def init(args):
         print("Aborted.")
         return
 
-def dev(args):
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+def build_spk_dev_command():
+    """Return shell command used for starting `spk dev`."""
+    return " && ".join([
         "/opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
-    ]))
+    ])
+
+def sync_dev_helper_scripts_if_changed(sandstorm_dir):
+    """Write helper scripts for `dev --tail` into .sandstorm only if changed."""
+    helper_scripts = {
+        "grain-log-tailer.sh": GRAIN_LOG_TAILER_SCRIPT,
+        "dev-with-tail.sh": DEV_WITH_TAIL_SCRIPT,
+    }
+    for script_name, script_contents in helper_scripts.items():
+        script_path = os.path.join(sandstorm_dir, script_name)
+        desired_bytes = script_contents.encode("UTF-8")
+        current_bytes = None
+        if os.path.exists(script_path):
+            with open(script_path, "rb") as f:
+                current_bytes = f.read()
+        if current_bytes != desired_bytes:
+            with open(script_path, "wb") as f:
+                f.write(desired_bytes)
+            os.chmod(script_path, 0o755)
+
+def dev(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    if args.tail:
+        sync_dev_helper_scripts_if_changed(sandstorm_dir)
+        sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
+        command = "/opt/app/.sandstorm/dev-with-tail.sh -- bash -lc " + shlex.quote(build_spk_dev_command())
+    else:
+        command = "bash -lc " + shlex.quote(build_spk_dev_command())
+    call_vagrant_command(
+        sandstorm_dir,
+        "ssh",
+        "-c",
+        command
+    )
 
 def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary,
                                   tmp_vagrant_spk_dir, enter_grain_binary_path):
@@ -841,7 +877,10 @@ def main():
              "and other configuration).  [Default: current \n"
              "working directory]")
     parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
+    parser.add_argument('--tail', action='store_true', help='With `dev`, tail all grain logs with colored grain-id prefixes')
     args = parser.parse_args(sys.argv[1:])
+    if args.tail and args.command != 'dev':
+        parser.error("--tail is only supported with the `dev` command")
     operation = op_to_func[args.command]
     operation(args)
 
