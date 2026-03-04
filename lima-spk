@@ -45,7 +45,6 @@ LIMA_INSTANCE_PREFIX = "sandstorm"
 # Port for Sandstorm dev server
 SANDSTORM_PORT = 6090
 
-
 def load_required_template_file(relative_path):
     """Load a required template from the repository's box/ directory."""
     template_path = os.path.join(CODE_DIR, relative_path)
@@ -142,6 +141,7 @@ GITIGNORE_CONTENTS = load_required_template_file("box/gitignore")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
 EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
 
+GRAIN_LOG_TAILER_SCRIPT = load_required_template_file("box/grain-log-tailer.sh")
 DEV_WITH_TAIL_SCRIPT = load_required_template_file("box/dev-with-tail.sh")
 
 TMP_LIMA_SPK_LOCATION = '/var/tmp/lima-spk'

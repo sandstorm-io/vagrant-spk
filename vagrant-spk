@@ -51,7 +51,6 @@ if not os.path.exists(EXECUTABLE_PATH):
     EXECUTABLE_PATH = sys.executable
 CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 
-
 def load_required_template_file(relative_path):
     """Load a required template from the repository's box/ directory."""
     template_path = os.path.join(CODE_DIR, relative_path)
@@ -66,6 +65,7 @@ VAGRANTFILE_CONTENTS = load_required_template_file("box/Vagrantfile")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
 EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
 
+GRAIN_LOG_TAILER_SCRIPT = load_required_template_file("box/grain-log-tailer.sh")
 DEV_WITH_TAIL_SCRIPT = load_required_template_file("box/dev-with-tail.sh")
 
 # Where to look for the vagrant-spk dir from inside the vm
