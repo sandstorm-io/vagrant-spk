@@ -272,7 +272,7 @@ def build_write_script_command(script_contents, target_path):
         hashlib.sha1(script_contents.encode("UTF-8")).hexdigest())
     while delimiter in script_contents:
         delimiter += "_X"
-    return "sudo tee {} >/dev/null <<'{}'\n{}\n{}".format(
+    return "{{ sudo tee {} >/dev/null <<'{}'\n{}\n{}\n}}".format(
         shlex.quote(target_path), delimiter, script_contents, delimiter)
 
 def build_prepare_dev_helpers_command():
