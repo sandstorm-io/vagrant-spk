@@ -44,6 +44,9 @@ Source: "..\stacks\*"; DestDir: "{app}\stacks"; Flags: recursesubdirs
 ; "helpers" - right now just the enter_grain binary and its sha1
 Source: "..\helpers\*"; DestDir: "{app}\helpers"; Flags: recursesubdirs
 
+; "box" helper scripts used by dev log tailing
+Source: "..\box\*"; DestDir: "{app}\box"; Flags: recursesubdirs
+
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [InstallDelete]
