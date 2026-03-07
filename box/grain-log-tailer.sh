@@ -10,6 +10,7 @@ color_index=0
 cleanup() {
   for pid in "${tail_pids[@]:-}"; do
     kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
   done
 }
 trap cleanup EXIT INT TERM

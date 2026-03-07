@@ -70,6 +70,7 @@ DEV_WITH_TAIL_SCRIPT = load_required_template_file("box/dev-with-tail.sh")
 
 # Where to look for the vagrant-spk dir from inside the vm
 TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
+DEV_HELPER_VM_DIR = TMP_VAGRANT_SPK_LOCATION
 
 def format_shell_grain_choices(supervisors):
     '''Return a formatted message based on the list of supervisor PIDs that were found, asking which
@@ -542,29 +543,32 @@ def build_spk_dev_command():
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     ])
 
-def sync_dev_helper_scripts_if_changed(sandstorm_dir):
-    """Write helper scripts for `dev` log tailing into .sandstorm only if changed."""
-    helper_scripts = {
-        "grain-log-tailer.sh": GRAIN_LOG_TAILER_SCRIPT,
-        "dev-with-tail.sh": DEV_WITH_TAIL_SCRIPT,
-    }
-    for script_name, script_contents in helper_scripts.items():
-        script_path = os.path.join(sandstorm_dir, script_name)
-        desired_bytes = script_contents.encode("UTF-8")
-        current_bytes = None
-        if os.path.exists(script_path):
-            with open(script_path, "rb") as f:
-                current_bytes = f.read()
-        if current_bytes != desired_bytes:
-            with open(script_path, "wb") as f:
-                f.write(desired_bytes)
-            os.chmod(script_path, 0o755)
+def build_write_script_command(script_contents, target_path):
+    """Return shell command to write a script to VM-local path from in-memory contents."""
+    delimiter = "VAGRANT_SPK_SCRIPT_{}".format(
+        hashlib.sha1(script_contents.encode("UTF-8")).hexdigest())
+    while delimiter in script_contents:
+        delimiter += "_X"
+    return "sudo tee {} >/dev/null <<'{}'\n{}\n{}".format(
+        shlex.quote(target_path), delimiter, script_contents, delimiter)
+
+def build_prepare_dev_helpers_command():
+    """Return shell command to write dev helper scripts to VM-local executable path."""
+    vm_grain_tailer = DEV_HELPER_VM_DIR + "/grain-log-tailer.sh"
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    return " && ".join([
+        "sudo mkdir -p " + shlex.quote(DEV_HELPER_VM_DIR),
+        build_write_script_command(GRAIN_LOG_TAILER_SCRIPT, vm_grain_tailer),
+        "sudo chmod 755 " + shlex.quote(vm_grain_tailer),
+        build_write_script_command(DEV_WITH_TAIL_SCRIPT, vm_dev_wrapper),
+        "sudo chmod 755 " + shlex.quote(vm_dev_wrapper),
+    ])
 
 def dev(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    sync_dev_helper_scripts_if_changed(sandstorm_dir)
     sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
-    command = "/opt/app/.sandstorm/dev-with-tail.sh -- bash -lc " + shlex.quote(build_spk_dev_command())
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    command = build_prepare_dev_helpers_command() + " && " + shlex.quote(vm_dev_wrapper) + " -- bash -lc " + shlex.quote(build_spk_dev_command())
     call_vagrant_command(
         sandstorm_dir,
         "ssh",

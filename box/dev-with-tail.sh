@@ -13,7 +13,8 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-tailer_script="/opt/app/.sandstorm/grain-log-tailer.sh"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+tailer_script="$script_dir/grain-log-tailer.sh"
 if [ ! -f "$tailer_script" ]; then
   echo "dev-with-tail.sh: missing $tailer_script" >&2
   exit 1

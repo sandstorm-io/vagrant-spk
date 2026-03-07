@@ -263,29 +263,34 @@ def build_spk_dev_command():
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
     )
 
-def sync_dev_helper_scripts_if_changed(sandstorm_dir):
-    """Write helper scripts for `dev` log tailing into .sandstorm only if changed."""
-    helper_scripts = {
-        "grain-log-tailer.sh": GRAIN_LOG_TAILER_SCRIPT,
-        "dev-with-tail.sh": DEV_WITH_TAIL_SCRIPT,
-    }
-    for script_name, script_contents in helper_scripts.items():
-        script_path = os.path.join(sandstorm_dir, script_name)
-        desired_bytes = script_contents.encode("UTF-8")
-        current_bytes = None
-        if os.path.exists(script_path):
-            with open(script_path, "rb") as f:
-                current_bytes = f.read()
-        if current_bytes != desired_bytes:
-            with open(script_path, "wb") as f:
-                f.write(desired_bytes)
-            os.chmod(script_path, 0o755)
+KEYRING_PATH = "/host-dot-sandstorm/sandstorm-keyring"
+DEV_HELPER_VM_DIR = TMP_LIMA_SPK_LOCATION
+
+def build_write_script_command(script_contents, target_path):
+    """Return shell command to write a script to VM-local path from in-memory contents."""
+    delimiter = "LIMA_SPK_SCRIPT_{}".format(
+        hashlib.sha1(script_contents.encode("UTF-8")).hexdigest())
+    while delimiter in script_contents:
+        delimiter += "_X"
+    return "sudo tee {} >/dev/null <<'{}'\n{}\n{}".format(
+        shlex.quote(target_path), delimiter, script_contents, delimiter)
+
+def build_prepare_dev_helpers_command():
+    """Return shell command to write dev helper scripts to VM-local executable path."""
+    vm_grain_tailer = DEV_HELPER_VM_DIR + "/grain-log-tailer.sh"
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    return " && ".join([
+        "sudo mkdir -p " + shlex.quote(DEV_HELPER_VM_DIR),
+        build_write_script_command(GRAIN_LOG_TAILER_SCRIPT, vm_grain_tailer),
+        "sudo chmod 755 " + shlex.quote(vm_grain_tailer),
+        build_write_script_command(DEV_WITH_TAIL_SCRIPT, vm_dev_wrapper),
+        "sudo chmod 755 " + shlex.quote(vm_dev_wrapper),
+    ])
 
 def build_tail_wrapped_dev_command():
     """Return command that runs spk dev with tailing managed by helper wrapper."""
-    return "/opt/app/.sandstorm/dev-with-tail.sh -- sg sandstorm -c " + shlex.quote(build_spk_dev_command())
-
-KEYRING_PATH = "/host-dot-sandstorm/sandstorm-keyring"
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    return build_prepare_dev_helpers_command() + " && " + shlex.quote(vm_dev_wrapper) + " -- sg sandstorm -c " + shlex.quote(build_spk_dev_command())
 
 def call_spk_command(instance_name, spk_subcommand, extra_args="", use_keyring=True, interactive=False):
     """Execute an spk command in the Lima VM."""
@@ -609,8 +614,6 @@ def init(args):
 def dev(args):
     check_dot_sandstorm(args.work_directory)
     instance_name = require_running_vm(args.work_directory)
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    sync_dev_helper_scripts_if_changed(sandstorm_dir)
     sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
     command = build_tail_wrapped_dev_command()
     call_lima_shell_command(
