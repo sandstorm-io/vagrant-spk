@@ -30,6 +30,7 @@ import os
 import glob
 import hashlib
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -50,7 +51,6 @@ if not os.path.exists(EXECUTABLE_PATH):
     EXECUTABLE_PATH = sys.executable
 CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 
-
 def load_required_template_file(relative_path):
     """Load a required template from the repository's box/ directory."""
     template_path = os.path.join(CODE_DIR, relative_path)
@@ -65,8 +65,12 @@ VAGRANTFILE_CONTENTS = load_required_template_file("box/Vagrantfile")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
 EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
 
+GRAIN_LOG_TAILER_SCRIPT = load_required_template_file("box/grain-log-tailer.sh")
+DEV_WITH_TAIL_SCRIPT = load_required_template_file("box/dev-with-tail.sh")
+
 # Where to look for the vagrant-spk dir from inside the vm
 TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
+DEV_HELPER_VM_DIR = TMP_VAGRANT_SPK_LOCATION
 
 def format_shell_grain_choices(supervisors):
     '''Return a formatted message based on the list of supervisor PIDs that were found, asking which
@@ -531,13 +535,46 @@ def init(args):
         print("Aborted.")
         return
 
-def dev(args):
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+def build_spk_dev_command():
+    """Return shell command used for starting `spk dev`."""
+    return " && ".join([
         "/opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
-    ]))
+    ])
+
+def build_write_script_command(script_contents, target_path):
+    """Return shell command to write a script to VM-local path from in-memory contents."""
+    delimiter = "VAGRANT_SPK_SCRIPT_{}".format(
+        hashlib.sha1(script_contents.encode("UTF-8")).hexdigest())
+    while delimiter in script_contents:
+        delimiter += "_X"
+    return "{{ sudo tee {} >/dev/null <<'{}'\n{}\n{}\n}}".format(
+        shlex.quote(target_path), delimiter, script_contents, delimiter)
+
+def build_prepare_dev_helpers_command():
+    """Return shell command to write dev helper scripts to VM-local executable path."""
+    vm_grain_tailer = DEV_HELPER_VM_DIR + "/grain-log-tailer.sh"
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    return " && ".join([
+        "sudo mkdir -p " + shlex.quote(DEV_HELPER_VM_DIR),
+        build_write_script_command(GRAIN_LOG_TAILER_SCRIPT, vm_grain_tailer),
+        "sudo chmod 755 " + shlex.quote(vm_grain_tailer),
+        build_write_script_command(DEV_WITH_TAIL_SCRIPT, vm_dev_wrapper),
+        "sudo chmod 755 " + shlex.quote(vm_dev_wrapper),
+    ])
+
+def dev(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
+    vm_dev_wrapper = DEV_HELPER_VM_DIR + "/dev-with-tail.sh"
+    command = build_prepare_dev_helpers_command() + " && " + shlex.quote(vm_dev_wrapper) + " -- bash -lc " + shlex.quote(build_spk_dev_command())
+    call_vagrant_command(
+        sandstorm_dir,
+        "ssh",
+        "-c",
+        command
+    )
 
 def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary,
                                   tmp_vagrant_spk_dir, enter_grain_binary_path):
