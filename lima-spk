@@ -362,14 +362,14 @@ def setup_vm(args):
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
     with open(setup_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("setup.sh"), "rb") as g:
-            f.write(g.read())
+            f.write(g.read().encode("UTF-8"))
     os.chmod(setup_script_path, 0o755)
 
     # Copy build script
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
     with open(build_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("build.sh"), "rb") as g:
-            f.write(g.read())
+            f.write(g.read().encode("UTF-8"))
     os.chmod(build_script_path, 0o755)
 
     # Copy launcher script
