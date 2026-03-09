@@ -41,10 +41,10 @@ Source: "dist\vagrant-spk.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; vagrant-spk platform stacks
 Source: "..\stacks\*"; DestDir: "{app}\stacks"; Flags: recursesubdirs
 
-; "helpers" - right now just the enter_grain binary and its sha1
+; "helpers" - includes enter_grain and dev helper scripts
 Source: "..\helpers\*"; DestDir: "{app}\helpers"; Flags: recursesubdirs
 
-; "box" helper scripts used by dev log tailing
+; "box" templates used during setupvm/upgradevm
 Source: "..\box\*"; DestDir: "{app}\box"; Flags: recursesubdirs
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
