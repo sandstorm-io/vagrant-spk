@@ -139,7 +139,6 @@ message: |
 GITATTRIBUTES_CONTENTS = load_required_template_file("box/gitattributes")
 GITIGNORE_CONTENTS = load_required_template_file("box/gitignore")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
-EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
 GRAIN_LOG_TAILER_SCRIPT = load_required_template_file("helpers/grain-log-tailer.sh")
 DEV_WITH_TAIL_SCRIPT = load_required_template_file("helpers/dev-with-tail.sh")
 
@@ -344,8 +343,9 @@ class StackPlugin(object):
         if not os.path.exists(plugin_dir):
             raise Exception(f"No stack plugin for {plugin_name}")
         if (not os.path.exists(os.path.join(plugin_dir, "setup.sh")) or
-            not os.path.exists(os.path.join(plugin_dir, "launcher.sh"))):
-            raise Exception("Stack plugins require both 'setup.sh' and 'launcher.sh' scripts.")
+            not os.path.exists(os.path.join(plugin_dir, "launcher.sh")) or
+            not os.path.exists(os.path.join(plugin_dir, "build.sh"))):
+            raise Exception("Stack plugins require 'setup.sh', 'build.sh', and 'launcher.sh' scripts.")
 
     def plugin_file(self, filename):
         return os.path.join(CODE_DIR, "stacks", self._plugin_name, filename)
@@ -396,18 +396,14 @@ def setup_vm(args):
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
     with open(setup_script_path, "wb") as f:
         with open(stack_plugin.plugin_file("setup.sh"), "rb") as g:
-            f.write(g.read())
+            f.write(g.read().encode("UTF-8"))
     os.chmod(setup_script_path, 0o755)
 
     # Copy build script
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
     with open(build_script_path, "wb") as f:
-        source_script_path = stack_plugin.plugin_file("build.sh")
-        if os.path.exists(source_script_path):
-            with open(source_script_path, "rb") as g:
-                f.write(g.read())
-        else:
-            f.write(EMPTY_BUILD_SCRIPT.encode("UTF-8"))
+        with open(stack_plugin.plugin_file("build.sh"), "rb") as g:
+            f.write(g.read().encode("UTF-8"))
     os.chmod(build_script_path, 0o755)
 
     # Copy launcher script
