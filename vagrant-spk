@@ -30,6 +30,7 @@ import os
 import glob
 import hashlib
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -50,9 +51,8 @@ if not os.path.exists(EXECUTABLE_PATH):
     EXECUTABLE_PATH = sys.executable
 CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
 
-
 def load_required_template_file(relative_path):
-    """Load a required template from the repository's box/ directory."""
+    """Load a required template file from the bundled repository."""
     template_path = os.path.join(CODE_DIR, relative_path)
     if not os.path.exists(template_path):
         raise Exception("Required template missing: {}".format(template_path))
@@ -64,6 +64,8 @@ GITIGNORE_CONTENTS = load_required_template_file("box/gitignore")
 VAGRANTFILE_CONTENTS = load_required_template_file("box/Vagrantfile")
 GLOBAL_SETUP_SCRIPT = load_required_template_file("box/global-setup.sh")
 EMPTY_BUILD_SCRIPT = load_required_template_file("box/empty-build.sh")
+GRAIN_LOG_TAILER_SCRIPT = load_required_template_file("helpers/grain-log-tailer.sh")
+DEV_WITH_TAIL_SCRIPT = load_required_template_file("helpers/dev-with-tail.sh")
 
 # Where to look for the vagrant-spk dir from inside the vm
 TMP_VAGRANT_SPK_LOCATION = '/var/tmp/vagrant-spk'
@@ -106,8 +108,8 @@ def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
     # and our commands work via stdout anyway.
     if assert_exit_success:
         if p.returncode != 0:
-            raise ValueError("Yikes, the command crashed. Command was: %s",
-                             vagrant_ssh_command_string)
+            raise ValueError("Command failed. Command was: {}".format(
+                             vagrant_ssh_command_string))
     return out
 
 
@@ -118,14 +120,17 @@ def call_vagrant_ssh_command_providing_stdin(sandstorm_dir,
     p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
                          cwd=sandstorm_dir)
     out, err = p.communicate(input=stdin)
-    # Ignore stderr, since it contains the vagrant output line of "Connection closed"
-    # and our commands work via stdout anyway.
     if assert_exit_success:
         if p.returncode != 0:
-            raise ValueError("Yikes, the command crashed. Command was: %s",
-                             vagrant_ssh_command_string)
+            err_text = err.decode("utf-8", errors="replace").strip() if err else ""
+            msg = "Command failed (exit status {}). Command was: {}".format(
+                p.returncode, vagrant_ssh_command_string)
+            if err_text:
+                msg += "\n" + err_text
+            raise RuntimeError(msg)
     return out
 
 
@@ -531,13 +536,55 @@ def init(args):
         print("Aborted.")
         return
 
-def dev(args):
-    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+def build_spk_dev_command():
+    """Return shell command used for starting `spk dev`."""
+    return " && ".join([
         "/opt/app/.sandstorm/build.sh",
         "cd /opt/app/.sandstorm",
         "spk dev --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef"
-    ]))
+    ])
+
+def copy_dev_helpers_to_tmp(sandstorm_dir):
+    """Copy dev helper scripts into VM /tmp without requiring sudo."""
+    dev_helper_vm_dir = "/tmp/vagrant-spk-devhelpers"
+    vm_grain_tailer = dev_helper_vm_dir + "/grain-log-tailer.sh"
+    vm_dev_wrapper = dev_helper_vm_dir + "/dev-with-tail.sh"
+
+    call_vagrant_ssh_command_providing_stdin(
+        sandstorm_dir,
+        "mkdir -p {dir} && chmod 755 {dir} && cat > {path} && chmod 755 {path}".format(
+            dir=shlex.quote(dev_helper_vm_dir),
+            path=shlex.quote(vm_grain_tailer),
+        ),
+        stdin=GRAIN_LOG_TAILER_SCRIPT.encode("UTF-8"),
+    )
+
+    call_vagrant_ssh_command_providing_stdin(
+        sandstorm_dir,
+        "mkdir -p {dir} && chmod 755 {dir} && cat > {path} && chmod 755 {path}".format(
+            dir=shlex.quote(dev_helper_vm_dir),
+            path=shlex.quote(vm_dev_wrapper),
+        ),
+        stdin=DEV_WITH_TAIL_SCRIPT.encode("UTF-8"),
+    )
+    return vm_dev_wrapper
+
+def dev(args):
+    sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    sys.stderr.write("Tailing grain logs (first 6 chars of grain ID as prefix)...\n")
+    try:
+        vm_dev_wrapper = copy_dev_helpers_to_tmp(sandstorm_dir)
+    except RuntimeError as e:
+        ANSI_RED = "\x1b[31m"
+        ANSI_RESET = "\x1b[0m"
+        sys.exit(ANSI_RED + str(e) + ANSI_RESET)
+    command = "bash " + shlex.quote(vm_dev_wrapper) + " -- bash -lc " + shlex.quote(build_spk_dev_command())
+    call_vagrant_command(
+        sandstorm_dir,
+        "ssh",
+        "-c",
+        command
+    )
 
 def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary,
                                   tmp_vagrant_spk_dir, enter_grain_binary_path):
