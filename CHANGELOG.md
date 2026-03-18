@@ -1,3 +1,13 @@
+### v1.3 (2026-03-18)
+- Added lima-spk alternative tool. (Thanks @mnutt)
+- Added grain log tailing in terminal. (Thanks @mnutt)
+- Moved base box configurations to separate files. (Thanks @mnutt)
+- Added basic Python stack.
+- Always use UTF-8 encoding for stack scripts.
+- Require build.sh for all platform stacks.
+- Require confirmation for commands which overwrite existing files.
+- Fix InnoDB settings for new minimum defaults. (Thanks @troyjfarrell)
+
 ### v1.2 (2024-03-16)
 - Updated base image to Debian Bookworm.
 - Configured MySQL stacks to only initialize the database once.

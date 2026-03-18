@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #   Copyright 2015-2018 Sandstorm Development Group, Inc. and contributors
-#   Copyright 2024-2026 Contributors
+#   Copyright 2019-2026 Contributors
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 
 from __future__ import print_function
 
-__version__ = "v0.1.0"
+__version__ = "v1.3"
 
 import argparse
 import json
