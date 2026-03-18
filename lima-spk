@@ -395,21 +395,21 @@ def setup_vm(args):
     # Copy stack-specific setup script
     setup_script_path = os.path.join(sandstorm_dir, "setup.sh")
     with open(setup_script_path, "wb") as f:
-        with open(stack_plugin.plugin_file("setup.sh"), "rb") as g:
+        with open(stack_plugin.plugin_file("setup.sh"), "r") as g:
             f.write(g.read().encode("UTF-8"))
     os.chmod(setup_script_path, 0o755)
 
     # Copy build script
     build_script_path = os.path.join(sandstorm_dir, "build.sh")
     with open(build_script_path, "wb") as f:
-        with open(stack_plugin.plugin_file("build.sh"), "rb") as g:
+        with open(stack_plugin.plugin_file("build.sh"), "r") as g:
             f.write(g.read().encode("UTF-8"))
     os.chmod(build_script_path, 0o755)
 
     # Copy launcher script
     launcher_script_path = os.path.join(sandstorm_dir, "launcher.sh")
     with open(launcher_script_path, "wb") as f:
-        with open(stack_plugin.plugin_file("launcher.sh")) as g:
+        with open(stack_plugin.plugin_file("launcher.sh"), "r") as g:
             f.write(g.read().encode("UTF-8"))
     os.chmod(launcher_script_path, 0o755)
 
