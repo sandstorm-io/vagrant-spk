@@ -141,10 +141,9 @@ def call_vagrant_command(sandstorm_dir, *command_args):
     try:
         return subprocess.check_call(command, cwd=sandstorm_dir)
     except subprocess.CalledProcessError as e:
-        ANSI_RED = "\x1b[31m"
-        ANSI_RESET = "\x1b[0m"
         msg = "Command failed with a non-zero exit status (%d)." % e.returncode
-        sys.exit(ANSI_RED + msg + ANSI_RESET)
+        print(msg, file=sys.stderr)
+        sys.exit(1)
 
 def ensure_working_vboxsf_in_base_box(sandstorm_dir):
     # If the .sandstorm/Vagrantfile refers to debian/jessie64 or sandstorm/debian-jessie64
@@ -815,7 +814,13 @@ class Command(object):
         self.hidden = hidden # if true, do not show in vagrant-spk --help
 
 
+def check_vagrant_installed():
+    if not shutil.which("vagrant"):
+        print("vagrant is not installed. Please install vagrant from https://www.vagrantup.com/ and try again.")
+        sys.exit(1)
+
 def main():
+    check_vagrant_installed()
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
     if os.environ.get("VAGRANT_SPK_EXPERIMENTAL", "").upper() == "Y":
