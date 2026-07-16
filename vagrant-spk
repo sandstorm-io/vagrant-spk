@@ -33,8 +33,11 @@ import hashlib
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
+
+CURRENT_SUBPROCESS = None
 
 PWD = os.getcwd()
 ENABLE_EXPERIMENTAL = False
@@ -51,6 +54,16 @@ EXECUTABLE_PATH = os.path.realpath(sys.argv[0])
 if not os.path.exists(EXECUTABLE_PATH):
     EXECUTABLE_PATH = sys.executable
 CODE_DIR = os.path.dirname(EXECUTABLE_PATH)
+
+def _signal_handler(signum, frame):
+    global CURRENT_SUBPROCESS
+    if CURRENT_SUBPROCESS is not None:
+        try:
+            os.killpg(CURRENT_SUBPROCESS.pid, signal.SIGTERM)
+        except (ProcessLookupError, AttributeError):
+            pass
+    sys.exit(128 + signum)
+
 
 def load_required_template_file(relative_path):
     """Load a required template file from the bundled repository."""
@@ -135,11 +148,22 @@ def call_vagrant_ssh_command_providing_stdin(sandstorm_dir,
 
 
 def call_vagrant_command(sandstorm_dir, *command_args):
+    global CURRENT_SUBPROCESS
     command = ["vagrant"]
     command.extend(command_args)
     sys.stderr.write("Calling {} in {}\n".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
+    startupinfo = None
+    if sys.platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     try:
-        return subprocess.check_call(command, cwd=sandstorm_dir)
+        p = subprocess.Popen(command, cwd=sandstorm_dir, startupinfo=startupinfo)
+        CURRENT_SUBPROCESS = p
+        retcode = p.wait()
+        CURRENT_SUBPROCESS = None
+        if retcode != 0:
+            raise subprocess.CalledProcessError(retcode, command)
+        return 0
     except subprocess.CalledProcessError as e:
         ANSI_RED = "\x1b[31m"
         ANSI_RESET = "\x1b[0m"
@@ -715,6 +739,7 @@ def shell(args):
         "NOTE: You should discard all sandstorm-files.list changes from this session to avoid bloat!\n")
 
 def pack(args):
+    global CURRENT_SUBPROCESS
     output_spk = args.command_specific_args[0]
     print(output_spk)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
@@ -816,6 +841,8 @@ class Command(object):
 
 
 def main():
+    signal.signal(signal.SIGINT, _signal_handler)
+    check_windows_virtualbox()
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
     if os.environ.get("VAGRANT_SPK_EXPERIMENTAL", "").upper() == "Y":
