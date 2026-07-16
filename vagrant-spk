@@ -571,9 +571,8 @@ def dev(args):
     try:
         vm_dev_wrapper = copy_dev_helpers_to_tmp(sandstorm_dir)
     except RuntimeError as e:
-        ANSI_RED = "\x1b[31m"
-        ANSI_RESET = "\x1b[0m"
-        sys.exit(ANSI_RED + str(e) + ANSI_RESET)
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
     command = "bash " + shlex.quote(vm_dev_wrapper) + " -- bash -lc " + shlex.quote(build_spk_dev_command())
     call_vagrant_command(
         sandstorm_dir,
@@ -895,4 +894,8 @@ def main():
     operation(args)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print("Error: {}".format(e), file=sys.stderr)
+        sys.exit(1)
