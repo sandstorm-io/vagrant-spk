@@ -108,4 +108,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # line, vagrant would automatically insert a synced folder in /vagrant, which is not what we want.
     override.vm.synced_folder "..", "/vagrant", type: "9p", accessmode: "passthrough", disabled: true
   end
+
+  # Run ssh with `-t` to avoid the confusing `stdin: is not a tty` printout.
+  config.ssh.pty = true
 end
