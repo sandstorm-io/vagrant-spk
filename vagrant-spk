@@ -28,6 +28,7 @@ __version__ = "v1.3"
 
 import argparse
 import os
+import posixpath
 import glob
 import hashlib
 import re
@@ -99,10 +100,15 @@ def call_vagrant_ssh_command_capturing_output(sandstorm_dir,
                                               vagrant_ssh_command_string,
                                               assert_exit_success=True):
     argv = ['vagrant', 'ssh', '-c', vagrant_ssh_command_string]
+    startupinfo = None
+    if sys.platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     p = subprocess.Popen(argv,
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE,
-                         cwd=sandstorm_dir)
+                         cwd=sandstorm_dir,
+                         startupinfo=startupinfo)
     out, err = p.communicate()
     # Ignore stderr, since it contains the vagrant output line of "Connection closed"
     # and our commands work via stdout anyway.
@@ -117,11 +123,16 @@ def call_vagrant_ssh_command_providing_stdin(sandstorm_dir,
                                              vagrant_ssh_command_string,
                                              stdin,
                                              assert_exit_success=True):
+    startupinfo = None
+    if sys.platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     p = subprocess.Popen(['vagrant', 'ssh', '-c', vagrant_ssh_command_string],
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE,
                          stderr=subprocess.PIPE,
-                         cwd=sandstorm_dir)
+                         cwd=sandstorm_dir,
+                         startupinfo=startupinfo)
     out, err = p.communicate(input=stdin)
     if assert_exit_success:
         if p.returncode != 0:
@@ -138,8 +149,12 @@ def call_vagrant_command(sandstorm_dir, *command_args):
     command = ["vagrant"]
     command.extend(command_args)
     sys.stderr.write("Calling {} in {}\n".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
+    startupinfo = None
+    if sys.platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     try:
-        return subprocess.check_call(command, cwd=sandstorm_dir)
+        return subprocess.check_call(command, cwd=sandstorm_dir, startupinfo=startupinfo)
     except subprocess.CalledProcessError as e:
         ANSI_RED = "\x1b[31m"
         ANSI_RESET = "\x1b[0m"
@@ -595,14 +610,13 @@ def dev(args):
         command
     )
 
-def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary,
-                                  tmp_vagrant_spk_dir, enter_grain_binary_path):
+def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, enter_grain_binary):
     ### The purpose of this function is to take a PID, which is presumably the root process of a
     ### grain within the vagrant-spk VM, and make sure that /tmp/vagrant-spk/enter_grain is the
-    ### binary that we want. If is isn't, then inject it.
+    ### binary that we want. If it isn't, then inject it.
     tmp_vagrant_spk_dir = '/proc/{}/root{}'.format(pid, TMP_VAGRANT_SPK_LOCATION)
-    sys.stderr.write("Adding enter_grain program to the grain in {}/enter-grain...\n".format(TMP_VAGRANT_SPK_LOCATION))
-    enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
+    enter_grain_binary_path = posixpath.join(tmp_vagrant_spk_dir, 'enter-grain')
+    sys.stderr.write("Adding enter_grain program to the grain in {}...\n".format(enter_grain_binary_path))
     commands = ' && '.join([
         # Make sure /tmp/vagrant-spk exists in the VM.
         'sudo mkdir -p {}'.format(tmp_vagrant_spk_dir),
@@ -623,7 +637,10 @@ def inject_enter_grain_into_grain(sandstorm_dir, pid, enter_grain_checksum, ente
 def shell(args):
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
     try:
+        # On Windows, try enter_grain then enter_grain.exe
         filename = os.path.join(CODE_DIR, 'helpers', 'enter_grain')
+        if sys.platform == 'win32' and not os.path.exists(filename):
+            filename = os.path.join(CODE_DIR, 'helpers', 'enter_grain.exe')
         with open(filename, 'rb') as fd:
             enter_grain_binary = fd.read()
         # There should be a .sha1 file next to the binary, just to make sure that it is not
@@ -710,14 +727,12 @@ def shell(args):
                      (chosen_supervisor['grain_id'], chosen_supervisor['child_pid']))
     pid = chosen_supervisor['child_pid']
     tmp_vagrant_spk_dir = '/proc/{}/root{}'.format(pid, TMP_VAGRANT_SPK_LOCATION)
-    enter_grain_binary_path = tmp_vagrant_spk_dir + '/enter-grain'
+    enter_grain_binary_path = posixpath.join(tmp_vagrant_spk_dir, 'enter-grain')
     inject_enter_grain_into_grain(
         sandstorm_dir,
         chosen_supervisor['child_pid'],
         desired_checksum,
         enter_grain_binary,
-        tmp_vagrant_spk_dir,
-        enter_grain_binary_path,
     )
     call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm",
