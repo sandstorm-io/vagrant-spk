@@ -718,15 +718,29 @@ def pack(args):
     output_spk = args.command_specific_args[0]
     print(output_spk)
     sandstorm_dir = os.path.join(args.work_directory, ".sandstorm")
+    # Check if keyring has any keys before packing
+    keyring_file = os.path.join(os.path.expanduser("~"), ".sandstorm", "sandstorm-keyring")
+    if not os.path.exists(keyring_file) or os.path.getsize(keyring_file) == 0:
+        print("No key found. Run 'vagrant-spk keygen' to generate a key, then try again.")
+        sys.exit(1)
     # spk doesn't like to build packages on the vboxsf filesystem due to some
     # oddity when you unlink an open file, so we build the package in the guest
     # homedir, then move it out to the host.
-    call_vagrant_command(sandstorm_dir, "ssh", "-c", " && ".join([
+    command = ["vagrant", "ssh", "-c", " && ".join([
         "cd /opt/app/.sandstorm/",
         "spk pack --keyring=/host-dot-sandstorm/sandstorm-keyring --pkg-def=/opt/app/.sandstorm/sandstorm-pkgdef.capnp:pkgdef /home/vagrant/sandstorm-package.spk",
         "spk verify --details /home/vagrant/sandstorm-package.spk",
         "mv /home/vagrant/sandstorm-package.spk /opt/app/sandstorm-package.spk"
-    ]))
+    ])]
+    sys.stderr.write("Calling {} in {}\n".format(" ".join(["'{}'".format(arg) for arg in command]), sandstorm_dir))
+    result = subprocess.run(command, cwd=sandstorm_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sys.stdout.write(result.stdout.decode("utf-8", errors="replace"))
+    if result.stderr:
+        sys.stderr.write(result.stderr.decode("utf-8", errors="replace"))
+    if result.returncode != 0:
+        if "key not found in keyring" in result.stderr.decode("utf-8", errors="replace").lower():
+            print("No key found. Run 'vagrant-spk keygen' to generate a key, then try again.")
+        sys.exit(1)
     shutil.move("sandstorm-package.spk", output_spk)
     print("package produced at {}".format(output_spk))
 
