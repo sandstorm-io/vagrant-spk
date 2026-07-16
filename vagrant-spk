@@ -27,6 +27,7 @@ from __future__ import print_function
 __version__ = "v1.3"
 
 import argparse
+import json
 import os
 import glob
 import hashlib
@@ -35,6 +36,9 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
+from urllib.error import URLError
+from urllib.request import urlopen, Request
 
 PWD = os.getcwd()
 ENABLE_EXPERIMENTAL = False
@@ -225,9 +229,12 @@ class StackPlugin(object):
         if not os.path.exists(plugin_dir):
             raise Exception("No stack plugin for {}".format(plugin_name))
         if (not os.path.exists(os.path.join(plugin_dir, "setup.sh")) or
-            not os.path.exists(os.path.join(plugin_dir, "launcher.sh")) or
             not os.path.exists(os.path.join(plugin_dir, "build.sh"))):
-            raise Exception("Stack plugins require 'setup.sh', 'build.sh', and 'launcher.sh' scripts.")
+            raise Exception("Stack plugins require 'setup.sh' and 'build.sh' scripts.")
+        if (not os.path.exists(os.path.join(plugin_dir, "launcher.sh")) and
+            not os.path.exists(os.path.join(plugin_dir, "spk-init-command"))):
+            raise Exception(
+                "Stack plugins require either 'launcher.sh' or 'spk-init-command' scripts.")
 
     def plugin_file(self, filename):
         return os.path.join(CODE_DIR, "stacks", self._plugin_name, filename)
@@ -239,6 +246,14 @@ class StackPlugin(object):
                 return f.read().strip()
         else:
             return ""
+
+    def init_command(self):
+        command_file = os.path.join(CODE_DIR, "stacks", self._plugin_name, "spk-init-command")
+        if os.path.exists(command_file):
+            with open(command_file) as f:
+                return f.read().strip()
+        else:
+            return "/bin/bash /opt/app/.sandstorm/launcher.sh"
 
 def switch_to_https_cdn_resources(input_file_contents):
     # Let's change HTML with regular expressions. I realize that is a
@@ -528,7 +543,8 @@ def init(args):
         stack_plugin = StackPlugin(stack)
         init_args = stack_plugin.init_args()
         # Initialize the package with spk init
-        call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- /bin/bash /opt/app/.sandstorm/launcher.sh".format(init_args))
+        spk_command = stack_plugin.init_command()
+        call_vagrant_command(sandstorm_dir, "ssh", "-c", "spk init -p 8000 --keyring=/host-dot-sandstorm/sandstorm-keyring --output=/opt/app/.sandstorm/sandstorm-pkgdef.capnp {} -- {}".format(init_args, spk_command))
     else:
         print("Aborted.")
         return
@@ -845,6 +861,43 @@ def check_windows_virtualbox():
             print("")
             sys.exit(1)
 
+def check_for_updates(force=False):
+    cache_dir = os.path.join(os.path.expanduser("~"), ".sandstorm", "caches")
+    cache_file = os.path.join(cache_dir, "version-check-cache")
+
+    if not force and os.path.exists(cache_file):
+        try:
+            with open(cache_file) as f:
+                data = json.load(f)
+                last_check = data.get("last_check", 0)
+                if time.time() - last_check < 86400:
+                    return
+        except (ValueError, IOError):
+            pass
+
+    try:
+        req = Request(
+            "https://api.github.com/repos/sandstorm-io/vagrant-spk/releases/latest",
+            headers={"User-Agent": "vagrant-spk"}
+        )
+        response = urlopen(req, timeout=10)
+        data = json.loads(response.read().decode("utf-8"))
+        latest_tag = data.get("tag_name", "")
+
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+        with open(cache_file, "w") as f:
+            json.dump({"last_check": time.time(), "latest_version": latest_tag}, f)
+
+        if latest_tag and latest_tag != __version__:
+            print("A new version of vagrant-spk is available ({}). "
+                  "Run 'pip install --upgrade vagrant-spk' or visit "
+                  "https://github.com/sandstorm-io/vagrant-spk/releases "
+                  "to upgrade.".format(latest_tag))
+    except (URLError, ValueError, IOError):
+        pass
+
+
 def main():
     check_windows_virtualbox()
     global ENABLE_EXPERIMENTAL
@@ -916,7 +969,9 @@ def main():
              "and other configuration).  [Default: current \n"
              "working directory]")
     parser.add_argument('--noninteractive', action='store_true', help='Suppress overwrite prompts (use in scripts)')
+    parser.add_argument('--check-updates', action='store_true', help='Check for updates to vagrant-spk')
     args = parser.parse_args(sys.argv[1:])
+    check_for_updates(force=args.check_updates)
     operation = op_to_func[args.command]
     operation(args)
 
