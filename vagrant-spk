@@ -822,7 +822,16 @@ class Command(object):
         self.hidden = hidden # if true, do not show in vagrant-spk --help
 
 
+def check_provider_available():
+    vboxmanage = shutil.which("VBoxManage")
+    if vboxmanage is None:
+        default_provider = os.environ.get("VAGRANT_DEFAULT_PROVIDER", "virtualbox")
+        if default_provider == "virtualbox":
+            print("VirtualBox not found. Please install VirtualBox from https://www.virtualbox.org/ and try again. If you want to use a different provider, set the VAGRANT_DEFAULT_PROVIDER environment variable.", file=sys.stderr)
+            sys.exit(1)
+
 def main():
+    check_provider_available()
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
     if os.environ.get("VAGRANT_SPK_EXPERIMENTAL", "").upper() == "Y":
