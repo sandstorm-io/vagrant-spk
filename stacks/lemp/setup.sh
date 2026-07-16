@@ -38,6 +38,11 @@ sed --in-place='' \
 sed --in-place='' \
         --expression='s/^;clear_env = no/clear_env=no/' \
         /etc/php/8.2/fpm/pool.d/www.conf
+# remove PHP upload and POST size limits
+sed --in-place='' \
+        --expression='s/^post_max_size = .*/post_max_size = 0/' \
+        --expression='s/^upload_max_filesize = .*/upload_max_filesize = 0/' \
+        /etc/php/8.2/fpm/php.ini
 # patch mysql conf to not change uid, and to use /var/tmp over /tmp
 # for secure-file-priv see https://github.com/sandstorm-io/vagrant-spk/issues/195
 sed --in-place='' \
