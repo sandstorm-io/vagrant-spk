@@ -792,9 +792,16 @@ def vm_subcommand(args):
 
     # Do a couple sanity checks.
     ensure_host_sandstorm_folder_exists()
-    if not os.path.exists(sandstorm_dir) or not os.path.exists(os.path.join(sandstorm_dir, "Vagrantfile")):
+    if not os.path.exists(sandstorm_dir):
         sys.stderr.write("You can't call `vm` commands if there's no `.sandstorm` folder.\n" +
                 "Try `vagrant-spk setupvm <stack>` first.\n")
+        sys.exit(1)
+    if not os.path.exists(os.path.join(sandstorm_dir, "Vagrantfile")):
+        if os.path.exists(os.path.join(sandstorm_dir, "lima.yaml")):
+            sys.stderr.write("It looks like you're using lima-spk. Please use `lima-spk vm up` instead of `vagrant-spk vm up`.\n")
+        else:
+            sys.stderr.write("You can't call `vm` commands if there's no `.sandstorm` folder.\n" +
+                    "Try `vagrant-spk setupvm <stack>` first.\n")
         sys.exit(1)
 
     subcommand = args.command_specific_args[0]
