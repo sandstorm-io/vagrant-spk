@@ -20,6 +20,7 @@ state:
 
 vendor/python.exe: | vendor state/wineprefix
 	wget https://www.python.org/ftp/python/3.11.6/python-3.11.6.exe -O vendor/python.exe
+	echo 'd19857c64d2ec2d2db67e308b5a1f87be677e7e8ef870e2271f5c573c7eaf314  vendor/python.exe' | sha256sum -c -
 	touch vendor/python.exe
 
 vendor/python.exe.installed: | vendor/python.exe
@@ -35,7 +36,8 @@ dist/vagrant-spk.exe: ../vagrant-spk | state/pyinstaller.installed
 	$(WINEARGS) $(WINE) 'c:/Program Files (x86)/Python311-32/Scripts/pyinstaller.exe' -F ../vagrant-spk
 
 vendor/innosetup.exe: | vendor
-	wget 'http://www.jrsoftware.org/download.php/is.exe?site=1' -O vendor/innosetup.exe
+	wget 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' -O vendor/innosetup.exe
+	echo '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732  vendor/innosetup.exe' | sha256sum -c -
 
 vendor/innosetup.exe.installed: | state/wineprefix vendor/innosetup.exe
 	$(WINEARGS) $(WINE) vendor/innosetup.exe /SP- /VERYSILENT /SUPPRESSMSGBOXES /ALLUSERS /NOICONS
