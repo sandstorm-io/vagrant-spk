@@ -815,7 +815,24 @@ class Command(object):
         self.hidden = hidden # if true, do not show in vagrant-spk --help
 
 
+def check_windows_virtualbox():
+    if sys.platform == 'win32':
+        try:
+            subprocess.check_output(['VBoxManage', '--version'], stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError):
+            print("ERROR: On Windows, vagrant-spk requires VirtualBox to be installed.")
+            print("")
+            print("Vagrant defaults to Hyper-V on Windows when VirtualBox is not present,")
+            print("which causes vagrant-spk to appear to hang forever.")
+            print("")
+            print("Please install VirtualBox from https://www.virtualbox.org/, or")
+            print("set the Vagrant provider explicitly with:")
+            print("    set VAGRANT_DEFAULT_PROVIDER=virtualbox")
+            print("")
+            sys.exit(1)
+
 def main():
+    check_windows_virtualbox()
     global ENABLE_EXPERIMENTAL
     # Switch on feature(s) that we don't think are ready for everyone.
     if os.environ.get("VAGRANT_SPK_EXPERIMENTAL", "").upper() == "Y":
